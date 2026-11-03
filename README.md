@@ -15,7 +15,7 @@ next to that product and is listed here with a link.
 | `ZMG0001` | BREXX/370 in TSO: `EXEC`, `%name` and `name` run an exec through BREXX/370 when its first line is `/* REXX */` | `IKJCT430` (EXEC), new `IKJCT437` | `PRE(UY16532)` | [mvslovers/brexx370](https://github.com/mvslovers/brexx370/tree/master/tso) | released with BREXX/370 3.0.0 |
 | `ZMG0002` | REKX/370 (rekx370) in TSO: the same for REKX/370 | `IKJEFT01`, `IKJCT430` (EXEC), new `IKJEFTRX`, `IKJCT437` | `PRE(UY16532,UY13431)` | [mvslovers/rekx370](https://github.com/mvslovers/rekx370/tree/main/tso) | not yet released |
 | `ZMG0003` | Both REXX side by side in TSO | EXEC | | | planned |
-| `ZMG0004` | `IKJCT441` for REXX: the variable access routine serves the variables of a running REXX exec as well as CLIST variables, so ISPF dialog variables work from REXX | `IKJCT441` in `IKJPTGT` | `PRE(ZP60038)` | this repository | in design |
+| `ZMG0004` | `IKJCT441` for REXX: the variable access routine serves the variables of a running REXX exec as well as CLIST variables, so ISPF dialog variables work from REXX | `IKJCT441` in `IKJPTGT` | `PRE(ZP60038)` | [this repository](zmg0004/) | in development |
 
 **`ZMG0001`, `ZMG0002` and `ZMG0003` exclude each other**: all three change
 the TSO `EXEC` command. `ZMG0004` changes none of their elements and can be
