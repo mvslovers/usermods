@@ -5,9 +5,10 @@ ZMGDRV   TITLE 'ZMG0004 TEST DRIVER FOR IKJCT441'
 *  FUNCTION    - DRIVES IKJCT441 FROM A TSO COMMAND PROCESSOR IN A
 *                (BATCH) TMP AND REPORTS EVERY RESULT WITH WTO.
 *
-*                OPERAND C: CLIST REGRESSION.  RUN FROM A CLIST THAT
-*                  SETS TESTV=HELLOWORLD AND X1=ONE.  THE SAME
-*                  SEQUENCE RUNS AGAINST THE INSTALLED IKJCT441 AND
+*                OPERANDS C AND D: CLIST REGRESSION.  RUN FROM A
+*                  CLIST THAT SETS TESTV=HELLOWORLD AND X1=ONE,
+*                  EACH IN A TMP STEP OF ITS OWN.  C RUNS THE
+*                  SEQUENCE AGAINST THE INSTALLED IKJCT441, D
 *                  AGAINST THE TEST COPY ZMGT441; THE LINES MUST
 *                  AGREE APART FROM THE MODULE NAME.
 *                OPERAND R: REXX PATH, OUTSIDE ANY CLIST, AGAINST A
@@ -56,6 +57,8 @@ ZMGDRV   CSECT
          LA    R3,4(R3,R2)         FIRST OPERAND CHARACTER
          CLI   0(R3),C'C'
          BE    TESTC
+         CLI   0(R3),C'D'
+         BE    TESTD
          CLI   0(R3),C'R'
          BE    TESTR
          CLI   0(R3),C'O'
@@ -64,16 +67,10 @@ ZMGDRV   CSECT
          BAL   R14,PRT
          B     EXIT
          TITLE 'CLIST REGRESSION'
-TESTC    MVC   EP,=CL8'IKJCT441'
+TESTC    MVC   EP,=CL8'IKJCT441'   THE INSTALLED MODULE
          BAL   R9,CSEQ
-         MVC   EP,=CL8'IKJCT441'   RESET TESTV FOR THE SECOND RUN
-         LA    R2,2
-         LA    R3,NTESTV
-         LA    R4,5
-         LA    R5,VHELLO
-         LA    R6,10
-         BAL   R14,CALL
-         MVC   EP,=CL8'ZMGT441'
+         B     EXIT
+TESTD    MVC   EP,=CL8'ZMGT441'    THE TEST COPY
          BAL   R9,CSEQ
          B     EXIT
 *
@@ -106,6 +103,36 @@ CSEQ     MVC   TID,=CL3'C1'        RETRIEVE TESTV
          LA    R2,18
          LA    R3,NNOSUCH
          LA    R4,6
+         SR    R5,R5
+         SR    R6,R6
+         BAL   R14,CALL
+         BAL   R14,REPORT
+         MVC   TID,=CL3'C5'        RETRIEVE/CREATE A NEW NAME
+         LA    R2,1
+         LA    R3,NNEWVAR
+         LA    R4,6
+         LA    R5,VMADE
+         LA    R6,4
+         BAL   R14,CALL
+         BAL   R14,REPORT
+         LA    R2,18
+         LA    R3,NNEWVAR
+         LA    R4,6
+         SR    R5,R5
+         SR    R6,R6
+         BAL   R14,CALL
+         BAL   R14,REPORT
+         MVC   TID,=CL3'C6'        UPDATE WITH A LONGER VALUE
+         LA    R2,2
+         LA    R3,NTESTV
+         LA    R4,5
+         LA    R5,VLONG
+         LA    R6,20
+         BAL   R14,CALL
+         BAL   R14,REPORT
+         LA    R2,18
+         LA    R3,NTESTV
+         LA    R4,5
          SR    R5,R5
          SR    R6,R6
          BAL   R14,CALL
@@ -504,6 +531,9 @@ NNEWV    DC    C'NEWV'
 VHELLO   DC    C'HELLOWORLD'
 VCHG     DC    C'CHANGED'
 VWORLD   DC    C'WORLD'
+NNEWVAR  DC    C'NEWVAR'
+VMADE    DC    C'MADE'
+VLONG    DC    C'ABCDEFGHIJKLMNOPQRST'
 *
 *  STAND-IN REXX ENVIRONMENT
 *

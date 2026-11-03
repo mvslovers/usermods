@@ -45,9 +45,15 @@ using the installed `IKJPTGT`.
 
 Results on TK5 (`test/results-tk5.txt`):
 
-- **CLIST regression**: the installed `IKJCT441` and `ZMGT441` give the same
-  48 lines: retrieve, update and retrieve, an undefined name (RC=52), and a
-  full locate-all over the CLIST's own and the system variables.
+- **CLIST regression**: the same CLIST runs the same sequence twice, in
+  two TMP steps: once against the installed `IKJCT441`, once against
+  `ZMGT441`. Of the 53 lines, 52 are equal; the one that differs is the
+  CLIST's own parameter `OP` (`C` or `D`), which selects the module. The
+  sequence: retrieve, update and retrieve, an undefined name (RC=52),
+  retrieve/create of a new name (the 2019 rework, re-driven through
+  `REDRIVE`), an update with a value longer than the original (a new value
+  element through `IKJINIT` in the private copy), and a full locate-all over
+  the CLIST's own and the system variables.
 - **REXX path**: locate-all returns the stand-in's variables and ends with
   RC=20 and a zero token; an update shows in the next locate-all; a new
   variable is created; retrieve gives RC=40, a name length of 0 RC=36; with a
