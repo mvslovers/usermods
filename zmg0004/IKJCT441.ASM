@@ -26,6 +26,10 @@ IKJCT441 TITLE ' CLIST VARIABLE ACCESS ROUTINE '
 *                LINES AFTER THE LABEL LOCNTFND WHICH ERRONEOUSLY
 *                DIFFERENTIATED BETWEEN THE RETRIEVE/CREATE AND THE
 *                UPDATE/CREATE REQUEST TYPES.
+*    03NOV2026 - ZMG0004: SERVE THE VARIABLES OF A RUNNING REXX
+*                EXEC AS WELL (SEE ' REXX PATH (ZMG0004) ').
+*                RETURN RC=40 INSTEAD OF READING LOW STORAGE
+*                WHEN THERE IS NO LWA (NOT UNDER A TMP).
 *
          TITLE ' PARAMETER LIST '
 *
@@ -290,7 +294,7 @@ SVTDATA  DS    0C                  CURRENT VALUE
          USING IKJCT441,R15
 IKJCT441 CSECT
          B     $START
-         DC    AL1(25),CL25'IKJCT441 ZP60038 20180120'
+         DC    AL1(25),CL25'IKJCT441 ZMG0004 20261103'
          DROP  R15                 (IKJCT441)
          USING IKJCT441,R12
 $START   STM   R14,R12,12(R13)     SAVE REGISTERS
@@ -378,7 +382,8 @@ PRMCHKOK DC    0H'0'               END OF INITIAL PLIST CHECK
          BZ    EXIT40              A ZERO ECT ADDRESS IS INVALID
          L     R1,PSAAOLD          POINT TO THE CURRENT ASCB
          L     R2,ASCBASXB-ASCB(,R1)    AND THEN TO THE ASXB
-         L     R1,ASXBLWA-ASXB(,R2)     AND THEN TO THE LWA
+         ICM   R1,15,ASXBLWA-ASXB(R2)   AND THEN TO THE LWA
+         BZ    EXIT40              NO LWA: NOT UNDER A TMP
          L     R3,LWAPECT-LWA(,R1)      AND THEN TO THE ECT
          L     R2,LWAPSCB-LWA(,R1)      AND ALSO TO THE PSCB
          L     R2,PSCBUPT-PSCB(,R2)     AND THEN TO THE UPT
@@ -398,6 +403,9 @@ PARM7OK  MVC   ECT@,PARM7          COPY ECT ADDRESS
 *         VERIFY THE CLIST ENVIRONMENT
 *
 REDRIVE  L     R7,ECT@             POINT TO THE ECT
+         BAL   R14,RXCHECK         IS A REXX EXEC THE CALLER?
+         LTR   R15,R15
+         BZ    REXXPATH            YES, SERVE ITS VARIABLES
          USING ECT,R7
          L     R6,ECTIOWA          POINT TO IOSRL
          DROP  R7                  (ECT)
@@ -779,6 +787,216 @@ FINISHUP L     R2,GPR15RC          PRESERVE PROGRAM RETURN CODE
          LM    R0,R12,20(R13)      RESTORE REMAINING REGISTERS
          BR    R14                 RETURN TO CALLER
          DROP  R12,R13             (IKJCT441, WORKAREA)
+         TITLE ' REXX PATH (ZMG0004) '
+*
+*  ZMG0004 SERVES THE VARIABLES OF A RUNNING REXX EXEC AS WELL.
+*
+*  A REXX EXEC IS THE CALLER WHEN ALL OF THESE HOLD:
+*     - ECT+X'30' (ECTENVBK) POINTS TO A BLOCK STARTING 'ENVBLOCK'
+*       THAT IS AT LEAST 320 BYTES LONG,
+*     - ITS IRXEXTE HAS A VARIABLE ACCESS ROUTINE (IRXEXTE+X'10'),
+*     - ENVBLOCK+X'130' HOLDS THE TOP INPUT STACK ELEMENT RECORDED
+*       WHEN THE EXEC STARTED, AND THAT ELEMENT IS STILL ON TOP.
+*  OTHERWISE THE CLIST PATH ABOVE RUNS UNCHANGED.  A CLIST STARTED
+*  BY THE EXEC PUSHES ITS OWN ELEMENT, SO ITS VARIABLES WIN.
+*
+*  THE ROUTINE IS CALLED THROUGH THE ADDRESS IN IRXEXTE ONLY, WITH
+*  THE IRXEXCOM PARAMETER LIST (PARAMETER 1 IS THE 8-BYTE STRING
+*  'IRXEXCOM', NOT A MODULE NAME) AND R0 -> ENVBLOCK.  NAMES GO
+*  THROUGH THE DIRECT INTERFACE: NO SUBSTITUTION, NO CASE CHANGE.
+*
+*  ENTRY CODES ON THIS PATH:
+*      2 - TSVEUPDT - SHVBLOCK 'S'
+*      3 - TSVELOC  - SHVBLOCK 'N'; THE TOKEN ADDRESSES A BLOCK
+*                     HOLDING THE NAME AND VALUE OF THE VARIABLE
+*                     LAST RETURNED, UNTIL THE NEXT CALL.  THE
+*                     BLOCK IS FREED WHEN RC=20 IS RETURNED.
+*      1, 18 -        RC=40 FOR NOW: WHO OWNS THE STORAGE OF A
+*                     RETRIEVED VALUE IS NOT DECIDED YET.
+*
+ECTENVBK EQU   X'30'               ECT: -> ENVBLOCK (TSO/E NAME)
+ENVLEN   EQU   X'0C'               ENVBLOCK: LENGTH
+ENVEXTE  EQU   X'1C'               ENVBLOCK: -> IRXEXTE
+ENVTOPEL EQU   X'130'              ENVBLOCK: TOP STACK ELEMENT
+EXTEXCOM EQU   X'10'               IRXEXTE: VARIABLE ACCESS ROUTINE
+SHVNEWV  EQU   X'01'               VARIABLE DID NOT EXIST
+SHVLVAR  EQU   X'02'               LAST VARIABLE TRANSFERRED
+SHVTRUNC EQU   X'04'               TRUNCATION OCCURRED
+SHVBADN  EQU   X'08'               INVALID VARIABLE NAME
+SHVBADV  EQU   X'10'               VALUE TOO LONG
+SHVBADF  EQU   X'80'               INVALID FUNCTION CODE
+         SPACE
+         USING IKJCT441,R12
+         USING WORKAREA,R13
+*
+*         RXCHECK - IS A REXX EXEC THE CALLER?  R7 -> ECT.
+*         R15 = 0: YES, RXENV@ AND RXEXCOM@ ARE SET.  R15 = 4: NO.
+*
+RXCHECK  ICM   R1,15,ECTENVBK(R7)  ENVBLOCK ADDRESS
+         BZ    RXCHKNO             NONE, NOT REXX
+         CLC   0(8,R1),=CL8'ENVBLOCK'  REALLY AN ENVBLOCK?
+         BNE   RXCHKNO             NO
+         CLC   ENVLEN(4,R1),=F'320'    LONG ENOUGH FOR X'130'?
+         BL    RXCHKNO             NO
+         ICM   R2,15,ENVEXTE(R1)   POINT TO IRXEXTE
+         BZ    RXCHKNO             NONE
+         ICM   R2,15,EXTEXCOM(R2)  POINT TO THE ROUTINE
+         BZ    RXCHKNO             NONE
+         ICM   R3,15,ENVTOPEL(R1)  ELEMENT AT THE START OF THE EXEC
+         BZ    RXCHKNO             NO EXEC RUNNING
+         L     R6,ECTIOWA-ECT(,R7) POINT TO IOSRL
+         C     R3,IOSTELM-IOSRL(,R6)   STILL THE TOP ELEMENT?
+         BNE   RXCHKNO             NO, A CLIST CAME ON TOP
+         ST    R1,RXENV@           SAVE THE ENVBLOCK ADDRESS
+         ST    R2,RXEXCOM@         SAVE THE ROUTINE ADDRESS
+         SLR   R15,R15             REXX IS THE CALLER
+         BR    R14
+RXCHKNO  LA    R15,4               NOT REXX
+         BR    R14
+*
+*         REXXPATH - DISPATCH A REQUEST ON THE REXX PATH
+*
+REXXPATH CLI   ECODE1,EC$EUPDT     UPDATE/CREATE REQUEST?
+         BE    RXUPDT              YES
+         CLI   ECODE1,EC$ELOC      LOCATE ALL REQUEST?
+         BE    RXLOC               YES
+         B     EXIT40              RETRIEVE: NOT YET, SEE ABOVE
+*
+*         RXUPDT - SET A VARIABLE ('S')
+*
+RXUPDT   L     R2,PARM2            POINT TO NAMEPTR
+         L     R2,0(,R2)           POINT TO NAME
+         LA    R2,0(,R2)           ENSURE ADDRESS FORMAT
+         LTR   R2,R2               WAS AN ACTUAL NAME SUPPLIED?
+         BZ    EXIT40              NO, INVALID
+         L     R3,PARM3            POINT TO NAMELEN
+         L     R3,0(,R3)           GET THE LENGTH
+         LTR   R3,R3               IS THE LENGTH POSITIVE?
+         BNP   EXIT36              NO, INVALID
+         CH    R3,=H'252'          IS THE LENGTH TOO LONG?
+         BH    EXIT36              YES, INVALID
+         L     R4,PARM4            POINT TO VALUEPTR
+         L     R4,0(,R4)           POINT TO VALUE
+         L     R5,PARM5            POINT TO VALUELEN
+         CLC   =F'32767',0(R5)     IS THE VALUE LENGTH VALID?
+         BL    EXIT36              NO, REJECT THE OPERATION
+         L     R5,0(,R5)           LOAD VALUELEN
+         LTR   R5,R5               NEGATIVE?
+         BM    EXIT36              YES, REJECT THE OPERATION
+         XC    SHVBLOCK(SHVBLEN),SHVBLOCK
+         MVI   SHVCODE,C'S'        STORE REQUEST
+         ST    R2,SHVNAMA          NAME
+         ST    R3,SHVNAML          AND ITS LENGTH
+         ST    R4,SHVVALA          VALUE
+         ST    R5,SHVVALL          AND ITS LENGTH
+         BAL   R14,RXCALL          ASK THE REXX EXEC
+         LTR   R15,R15             DID THE CALL WORK?
+         BM    EXIT40              NO, ENVIRONMENT PROBLEM
+         TM    SHVRET,SHVBADF      FUNCTION REJECTED?
+         BO    EXIT40              YES, ENVIRONMENT PROBLEM
+         TM    SHVRET,SHVBADN+SHVBADV  BAD NAME OR VALUE?
+         BNZ   EXIT36              YES
+         B     EXIT00              VARIABLE SET
+*
+*         RXLOC - RETURN THE NEXT VARIABLE ('N')
+*
+RXLOC    L     R6,PARM6            POINT TO THE TOKEN
+         ICM   R8,15,0(R6)         CONTINUING A SEQUENCE?
+         BNZ   RXLOCOLD            YES
+         L     R0,=A(RXLSIZE)      GET THE BLOCK SIZE
+         GETMAIN RC,LV=(0),SP=1    GET A BLOCK FOR NAME AND VALUE
+         LTR   R15,R15             SUCCESS?
+         BNZ   EXIT32              NO
+         LR    R8,R1               POINT TO THE NEW BLOCK
+         USING RXLBLOCK,R8
+         MVC   RXLID,=CL8'ZMG4LOC'     MARK IT AS OURS
+         ST    R8,0(,R6)           TOKEN FOR THE NEXT CALL
+         B     RXLOCNXT            GET THE FIRST VARIABLE
+RXLOCOLD CLC   RXLID,=CL8'ZMG4LOC'     ONE OF OUR BLOCKS?
+         BNE   EXIT40              NO, CORRUPT TOKEN (BAD PLIST)
+RXLOCNXT XC    SHVBLOCK(SHVBLEN),SHVBLOCK
+         MVI   SHVCODE,C'N'        FETCH NEXT REQUEST
+         LA    R0,RXLNAME          NAME BUFFER
+         ST    R0,SHVNAMA
+         LA    R0,L'RXLNAME        AND ITS LENGTH
+         ST    R0,SHVUSER
+         LA    R0,RXLVALUE         VALUE BUFFER
+         ST    R0,SHVVALA
+         L     R0,=A(RXLVLEN)      AND ITS LENGTH
+         ST    R0,SHVBUFL
+         BAL   R14,RXCALL          ASK THE REXX EXEC
+         LTR   R15,R15             DID THE CALL WORK?
+         BM    RXLOCERR            NO, ENVIRONMENT PROBLEM
+         TM    SHVRET,SHVBADF      FUNCTION REJECTED?
+         BO    RXLOCERR            YES, ENVIRONMENT PROBLEM
+         TM    SHVRET,SHVLVAR      NO MORE VARIABLES?
+         BO    RXLOCEND            YES
+         TM    SHVRET,SHVTRUNC     NAME OR VALUE TOO LONG FOR US?
+         BO    RXLOCNXT            YES, SKIP THIS VARIABLE
+         L     R2,PARM2            POINT TO NAMEPTR
+         L     R3,PARM3            POINT TO NAMELEN
+         LA    R0,RXLNAME          SYMBOL NAME ADDRESS
+         ST    R0,0(,R2)           UPDATE NAMEPTR
+         MVC   0(4,R3),SHVNAML     UPDATE NAMELEN
+         L     R2,PARM4            POINT TO VALUEPTR
+         L     R3,PARM5            POINT TO VALUELEN
+         LA    R0,RXLVALUE         VALUE ADDRESS
+         ST    R0,0(,R2)           SET VALUEPTR
+         MVC   0(4,R3),SHVVALL     SET VALUELEN
+         B     EXIT00              RETURN WITH SUCCESS
+RXLOCEND BAL   R14,RXLFREE         FREE THE BLOCK, RESET THE TOKEN
+         LM    R2,R5,PARM2         POINT TO NAME/VALUE DESCRIPTORS
+         SLR   R0,R0
+         ST    R0,0(,R2)           RESET NAMEPTR
+         ST    R0,0(,R3)           RESET NAMELEN
+         ST    R0,0(,R4)           RESET VALUEPTR
+         ST    R0,0(,R5)           RESET VALUELEN
+         B     EXIT20              NO MORE VARIABLES TO RETURN
+RXLOCERR BAL   R14,RXLFREE         FREE THE BLOCK, RESET THE TOKEN
+         B     EXIT40              BAD ENVIRONMENT
+RXLFREE  ST    R14,RXSAV14         SAVE THE RETURN ADDRESS
+         XC    RXLID,RXLID         THE BLOCK IS NO LONGER OURS
+         L     R0,=A(RXLSIZE)      GET THE BLOCK SIZE
+         FREEMAIN RU,LV=(0),A=(R8),SP=1
+         L     R6,PARM6            POINT TO THE TOKEN
+         SLR   R0,R0
+         ST    R0,0(,R6)           RESET THE TOKEN
+         L     R14,RXSAV14         RESTORE THE RETURN ADDRESS
+         BR    R14
+         DROP  R8                  (RXLBLOCK)
+*
+*         RXCALL - CALL THE VARIABLE ACCESS ROUTINE WITH SHVBLOCK
+*         R15 ON RETURN: <0 FAILED, OTHERWISE SEE SHVRET
+*
+RXCALL   ST    R14,RXSAV14         SAVE THE RETURN ADDRESS
+         LA    R0,=CL8'IRXEXCOM'   PARAMETER 1: THE STRING
+         ST    R0,RXPL1
+         SLR   R0,R0
+         ST    R0,RXZERO           PARAMETERS 2 AND 3: A ZERO WORD
+         LA    R0,RXZERO
+         ST    R0,RXPL2
+         ST    R0,RXPL3
+         LA    R0,SHVBLOCK         PARAMETER 4: THE SHVBLOCK
+         ST    R0,RXPL4
+         OI    RXPL4,X'80'         IS THE LAST ONE
+         LA    R1,RXPL1            POINT TO THE PARAMETER LIST
+         L     R0,RXENV@           R0 -> ENVBLOCK
+         L     R15,RXEXCOM@        POINT TO THE ROUTINE
+         BALR  R14,R15             CALL IT
+         L     R14,RXSAV14         RESTORE THE RETURN ADDRESS
+         BR    R14
+         DROP  R12,R13             (IKJCT441, WORKAREA)
+         SPACE
+*
+*         LOCATE-ALL BLOCK FOR THE REXX PATH (SUBPOOL 1)
+*
+RXLBLOCK DSECT
+RXLID    DS    CL8                 C'ZMG4LOC'
+RXLNAME  DS    CL252               NAME OF THE LAST VARIABLE
+RXLVALUE DS    CL32767             ITS VALUE
+RXLVLEN  EQU   L'RXLVALUE
+RXLSIZE  EQU   *-RXLBLOCK
+IKJCT441 CSECT
          TITLE ' CONSTANTS AND LITERALS '
          LTORG
          DC    0D'0'               END OF CSECT
@@ -830,6 +1048,29 @@ LCVALPTR DS    A                   -> LOCATE VALUE
 LCVALLEN DS    A                   -> LOCATE VALUE LENGTH (FULLWORD)
 UPVALPTR DS    A                   -> UPDATE VALUE
 UPVALLEN DS    A                   -> UPDATE VALUE LENGTH (FULLWORD)
+         SPACE
+*         REXX PATH (ZMG0004)
+*
+RXENV@   DS    A                   ENVBLOCK OF THE CALLING REXX EXEC
+RXEXCOM@ DS    A                   ITS VARIABLE ACCESS ROUTINE
+RXSAV14  DS    A                   RETURN ADDRESS OF RXCALL
+RXZERO   DS    F                   PARAMETERS 2 AND 3 POINT HERE
+RXPL1    DS    A                   -> C'IRXEXCOM' (PARAMETER 1)
+RXPL2    DS    A                   -> RXZERO
+RXPL3    DS    A                   -> RXZERO
+RXPL4    DS    A                   -> SHVBLOCK, LAST PARAMETER
+SHVBLOCK DS    0F                  ONE VARIABLE ACCESS REQUEST
+SHVNEXT  DS    A                   -> NEXT SHVBLOCK (ALWAYS 0 HERE)
+SHVUSER  DS    F                   'N': LENGTH OF THE NAME BUFFER
+SHVCODE  DS    C                   FUNCTION CODE
+SHVRET   DS    X                   RETURN CODE FLAGS
+         DS    H                   RESERVED
+SHVBUFL  DS    F                   LENGTH OF THE VALUE BUFFER
+SHVNAMA  DS    A                   -> VARIABLE NAME
+SHVNAML  DS    F                   LENGTH OF THE VARIABLE NAME
+SHVVALA  DS    A                   -> VALUE (BUFFER)
+SHVVALL  DS    F                   LENGTH OF THE VALUE
+SHVBLEN  EQU   *-SHVBLOCK          32 BYTES
          SPACE
 WORKEND  DS    0D                  END OF DSECT
 $WKSIZE  EQU   WORKEND-WORKAREA
