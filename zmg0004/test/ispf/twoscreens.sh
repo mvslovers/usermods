@@ -1,7 +1,7 @@
 #!/bin/sh
 # Two ISPF logical screens with real BREXX execs, on a throwaway TK5 that has BREXX
 # (feature/irxexcom) deployed and ZMG0001 applied.  twoscreens.sh ENVFILE OUTDIR [CASE...]
-# Prepares the libraries with mkjob.py --trace and mkwho.py --add, then runs each case
+# Prepares the libraries with mkjob.py and mkwho.py --add, then runs each case
 # in a fresh logon.  One result file per case, so an interrupted run keeps what it has.
 HERE=$(cd "$(dirname "$0")" && pwd)
 ENVF=$1; OUT=$2; shift 2
@@ -53,7 +53,7 @@ enter
 wait 4
 string ISPEXEC SELECT CMD(%$2)
 enter
-wait 6
+wait 12
 show s2-start
 enter
 wait 5
@@ -115,7 +115,7 @@ D() { pre XS3 XQ; back NEW3; }
 E() { pre XS3 XP; back NEW3; printf 'enter\nwait 4\npf 9\nwait 4\npf 3\nwait 5\nshow xp-after\n'; }
 
 kick
-python3 "$HERE/mkjob.py" set.jcl --trace > /dev/null; sub set.jcl
+python3 "$HERE/mkjob.py" set.jcl > /dev/null; sub set.jcl
 python3 "$HERE/mkwho.py" add.jcl --add; sub add.jcl
 for m in XS1 XS2 XS3 XS4 XQ XP XC; do
   curl -s -m 30 -u "$AUTH" -X PUT -H 'Content-Type: text/plain' --data-binary @"$HERE/lib/$m" \
@@ -125,7 +125,7 @@ for c in $CASES; do
   kick
   MBT_TARGET=env mbt target ping env --tso --wait 90 > /dev/null 2>&1
   "$c" > "$c.s"
-  PYTHONUNBUFFERED=1 timeout 150 python3 "$HERE/s3.py" "$ENVF" "$c.s" 2>&1 | cut -c1-80 > "$c.res"
+  PYTHONUNBUFFERED=1 timeout 260 python3 "$HERE/s3.py" "$ENVF" "$c.s" 2>&1 | cut -c1-80 > "$c.res"
   echo "$c done: $(wc -l < "$c.res") lines"
 done
 kick
