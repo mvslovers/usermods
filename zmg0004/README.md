@@ -7,13 +7,14 @@ work from REXX. Design: [`internals/ZMG0004.md`](../internals/ZMG0004.md).
 Status: written and tested, **not ready**. No usermod packaging yet (MCS, jobs),
 and there is an open defect under ISPF:
 
-**Open defect.** On the REXX path `VGET` can end with RC=0 without the value
-reaching the exec. With `V1`, `A1` and two short variables it works; with three
-short variables, or two with longer values, ISPF sends no `TSVEUPDT` after `VGET`.
-`IKJCT441` returns the right values in the sequences before that (traced). Not
-caused by freeing storage: a build that frees nothing behaves the same. A CLIST
-of the same shape works. Cause not known yet; `test/ispf/lib/F1` passes and `F5`,
-`TE4` fail, `CW` is the CLIST control.
+**Open defect, in ISPF and not in this module.** A variable that first appears
+after the first `ISPEXEC` call of a dialog does not get its value back from `VGET`:
+`VGET` ends with RC=0, ISPF sends no `TSVEUPDT`, the variable keeps its old value.
+A plain CLIST shows the same with the unchanged `IKJCT441` of `ZP60038` on TK5
+(`test/ispf/lib/H1` works, `H3` does not); so does REXX (`G1` works, `G3` does not).
+With variables that all exist before the first `ISPEXEC`, 30 variables and long values
+work. CLISTs rarely meet this, REXX execs usually do, because `RC` alone appears after
+the first call. Reported to the author of ISPF.
 
 | File | What it is |
 |---|---|
@@ -85,8 +86,8 @@ Results on TK5 (`test/results-tk5.txt`):
 - **Under ISPF** (`test/ispf`, TK5 only so far; the harness does not yet drive the
   command panel of MVS/CE): `VPUT` and `VGET` from a REXX dialog started with
   `%name` (through `ZMG0001`) and from a CLIST that calls the exec, a panel with
-  input read back, 300 `ISPEXEC` calls in a row, 10,000 stem entries. But see the
-  open defect above. ISPF sends no `TSVEUPDT` inside a `TSVELOC` sequence (traced
+  input read back, 300 `ISPEXEC` calls in a row, 10,000 stem entries, for variables
+  that exist before the first `ISPEXEC`; see the open defect above. ISPF sends no `TSVEUPDT` inside a `TSVELOC` sequence (traced
   for `VPUT`, `VGET`, `DISPLAY`).
 
 Measured on the base as well: before the change, IFOX00 on TK5 gives the

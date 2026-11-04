@@ -56,6 +56,11 @@ if "--trace" in sys.argv:
                     f"         TPUT  {text},8",
                     "         LM    R0,R15,TRSAV"]
     trace("         BAL   R14,RXCFREE ", "=CL8'LOC-BEG '")
+    # every request that gets past the parameter checks, and what the choice of path says
+    trace("         ICM   R7,15,PARM7         POINT TO ECTPARM", "=CL8'REQUEST '")
+    for label, text in (("RXCHKNO  LA", "=CL8'NOTREXX '"), ("EXIT40   LA", "=CL8'EXIT40  '")):
+        i = [k for k, l in enumerate(src) if l.startswith(label)][0]
+        src[i + 1:i + 1] = ["         STM   R0,R15,TRSAV", f"         TPUT  {text},8", "         LM    R0,R15,TRSAV"]
     # RXUPDT and RXLOCEND carry a label on their first statement: put the trace behind it
     for label, text in (("RXUPDT   L", "=CL8'UPDATE  '"), ("RXLOCEND BAL", "=CL8'LOC-END '")):
         i = [k for k, l in enumerate(src) if l.startswith(label)][0]
@@ -133,7 +138,7 @@ j = ["//ZMG4SET JOB (1),'ZMG4 ISPF',CLASS=A,MSGCLASS=H,MSGLEVEL=(1,1),",
      "//SYSUT2   DD DSN=HERC01.ZMG4.EXEC,DISP=(NEW,CATLG),UNIT=SYSDA,",
      "//            SPACE=(TRK,(5,5,5)),DCB=(RECFM=FB,LRECL=80,BLKSIZE=3120)",
      "//SYSIN    DD DATA,DLM=@@"] + members(
-         "C1", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "C8", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "TA", "TB", "TC", "TD", "F1", "F5", "TE4", "CW", "ISPZ") + [
+         "C1", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "C8", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "TA", "TB", "TC", "TD", "F1", "F5", "TE4", "CW", "G1", "G3", "H1", "H3", "ISPZ") + [
      "//PANEL   EXEC PGM=IEBUPDTE,PARM=NEW,COND=(0,NE)",
      "//SYSPRINT DD SYSOUT=*",
      "//SYSUT2   DD DSN=HERC01.ZMG4.PLIB,DISP=(NEW,CATLG),UNIT=SYSDA,",
