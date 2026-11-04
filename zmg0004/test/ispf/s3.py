@@ -5,6 +5,9 @@
 
 ENVFILE holds MBT_TARGET_TN3270_HOST and _PORT. Script lines:
 wait N | show TAG | string TEXT | enter | pf N | pa N | clear | tab | home
+run TIMEOUT TEXT: type TEXT, press Enter, print the line-mode output page by page
+until the screen is the TSO command panel again ("-" types nothing and only waits). If the screen shows a panel
+marked ZMG0004, it answers from the next "panel" lines: tab, string, enter.
 """
 import subprocess
 import sys
@@ -37,6 +40,36 @@ def show(tag):
             print(x[6:].rstrip())
 
 
+def lines():
+    return [x[6:].rstrip() for x in cmd("Ascii()") if x.startswith("data: ")]
+
+
+def run(timeout, text):
+    print(f"--- {text}")
+    if text != "-":
+        cmd("Reset()")
+        cmd('String("%s")' % text.replace('"', '\\"'))
+        cmd("Enter()")
+        time.sleep(2)
+    end = time.time() + timeout
+    while time.time() < end:
+        s = lines()
+        body = [x for x in s if x.strip()]
+        if any("ZMG0004" in x for x in body):
+            return
+        if body and body[-1].strip() == "***":
+            for x in body[:-1]:
+                if "COMMAND PROCESSOR" not in x and "ENTER TSO COMMAND" not in x and not x.lstrip().startswith(("=>", "===>", "Use command", "Place cursor", "/C ", "**")):
+                    print(x)
+            cmd("Enter()")
+            time.sleep(1.5)
+            continue
+        if any("ENTER TSO COMMAND" in x for x in s):
+            return
+        time.sleep(1)
+    print("--- TIMEOUT")
+
+
 cmd(f"Connect({env['MBT_TARGET_TN3270_HOST']}:{env['MBT_TARGET_TN3270_PORT']})")
 cmd("Wait(5,Output)")
 for raw in open(sys.argv[2]):
@@ -44,7 +77,10 @@ for raw in open(sys.argv[2]):
     if not line or line.startswith("#"):
         continue
     verb, _, arg = line.partition(" ")
-    if verb == "wait":
+    if verb == "run":
+        to, _, text = arg.partition(" ")
+        run(float(to), text)
+    elif verb == "wait":
         time.sleep(float(arg))
     elif verb == "show":
         show(arg)

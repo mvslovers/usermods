@@ -188,6 +188,22 @@ TESTR    MVC   EP,=CL8'ZMGT441'
          LA    R6,5
          BAL   R14,CALL
          BAL   R14,REPORT
+         MVC   TID,=CL3'R7'        A VALUE SURVIVES RC=20, AS ISPF
+         XC    TOKEN,TOKEN         NEEDS: KEEP THE FIRST VALUE ADDRESS
+         LA    R2,3
+         SR    R3,R3
+         SR    R4,R4
+         SR    R5,R5
+         SR    R6,R6
+         BAL   R14,CALL
+         MVC   KEEPP,PVALP
+         MVC   KEEPL,PVALL
+         BAL   R14,LOCDONE         GO ON UNTIL RC=20
+         MVC   PVALP,KEEPP         REPORT THE FIRST VALUE NOW
+         MVC   PVALL,KEEPL
+         XC    PNAMEL,PNAMEL
+         MVC   LASTRC,=F'0'
+         BAL   R14,REPORT
          MVC   TID,=CL3'R6'        STALE TOP ELEMENT: CLIST PATH, 40
          MVC   FENVTOP,=F'1'
          LA    R2,2
@@ -503,6 +519,8 @@ ECTA     DS    A
 TOPEL    DS    A
 OLDENV   DS    A
 LASTRC   DS    F
+KEEPP    DS    A
+KEEPL    DS    F
 EP       DS    CL8
 TID      DS    CL3
 LOCQUIET DS    X
