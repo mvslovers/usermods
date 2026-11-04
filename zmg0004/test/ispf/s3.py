@@ -4,7 +4,7 @@
     s3.py ENVFILE SCRIPT
 
 ENVFILE holds MBT_TARGET_TN3270_HOST and _PORT. Script lines:
-wait N | show TAG | string TEXT | enter | pf N | pa N | clear | tab | home
+wait N | show TAG | string TEXT | enter | pf N | pa N | clear | tab | home | move ROW COL (from 0)
 run TIMEOUT TEXT: type TEXT, press Enter, print the line-mode output page by page
 until the screen is the TSO command panel again ("-" types nothing and only waits). If the screen shows a panel
 marked ZMG0004, it answers from the next "panel" lines: tab, string, enter.
@@ -103,6 +103,9 @@ for raw in open(sys.argv[2]):
         cmd("Tab()")
     elif verb == "home":
         cmd("Home()")
+    elif verb == "move":
+        r, c = arg.split()
+        cmd(f"MoveCursor({r},{c})")
     else:
         print("?", line)
 cmd("Disconnect()")
