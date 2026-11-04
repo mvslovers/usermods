@@ -36,6 +36,17 @@ Two changes on the CLIST side: the module identifies itself as
 `IKJCT441 ZMG0004`, and without an LWA (not under a TMP) it returns RC=40
 instead of reading low storage.
 
+## Limits of ISPF that a dialog meets
+
+Measured on TK5 with ISPF V2R2M0, for CLIST and REXX alike unless noted.
+
+| Limit | What happens |
+|---|---|
+| A dialog variable name has at most 8 characters | `VPUT` with a 9-character name ends with RC=20. Longer names can exist in the CLIST or exec; ISPF skips them when it collects the variables, and they do not use up its table (2,100 long names in a CLIST, 3,000 in an exec: RC=0) |
+| ISPF collects at most 2,048 variables per `ISPEXEC` call | A table of 32 KB with 16 bytes per entry and no check of its end. A CLIST with 2,000 short names works; with 2,100 the process abends, also with the unchanged `IKJCT441` of `ZP60038`. On the REXX path `IKJCT441` stops at 2,048 names |
+| Variables reach ISPF only in a dialog started with `SELECT CMD(%name)` | Started as `EX` or `RX` from option 6, or as `SELECT CMD(EX ...)`, `VPUT` ends with RC=8, also for a plain CLIST. A REXX exec needs `%name` through `ZMG0001`, or a CLIST started that way which calls it |
+| Stems and compound variables | On the REXX path `IKJCT441` does not return names with a period. Otherwise 2,048 stem entries would fill the table and hide the simple variables |
+
 ## Tests
 
 `python3 test/mktest.py ZMGTEST.jcl` writes the job; submit it to a

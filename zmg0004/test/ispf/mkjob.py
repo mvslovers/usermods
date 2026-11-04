@@ -24,6 +24,12 @@ def members(*names):
     return out + ["./ ENDUP", "@@"]
 
 
+if "--nofilter" in sys.argv:
+    # test only: return every name, to measure what ISPF does with them
+    a = [k for k, l in enumerate(src) if l.startswith("         L     R1,SHVNAML          GET THE NAME LENGTH")][0]
+    b = [k for k, l in enumerate(src) if l.startswith("         L     R1,RXLCOUNT         COUNT THE VARIABLES")][0]
+    del src[a:b]
+
 if "--trace" in sys.argv:
     i = [k for k, l in enumerate(src) if l.startswith("REDRIVE  L     R7,ECT@")][0]
     src[i + 1:i + 1] = [
@@ -80,12 +86,12 @@ j = ["//ZMG4SET JOB (1),'ZMG4 ISPF',CLASS=A,MSGCLASS=H,MSGLEVEL=(1,1),",
      "//SYSUT2   DD DSN=HERC01.ZMG4.EXEC,DISP=(NEW,CATLG),UNIT=SYSDA,",
      "//            SPACE=(TRK,(5,5,5)),DCB=(RECFM=FB,LRECL=80,BLKSIZE=3120)",
      "//SYSIN    DD DATA,DLM=@@"] + members(
-         "C1", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "T1", "T2", "T3", "T4", "T5", "T6", "T7") + [
+         "C1", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "C8", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8") + [
      "//PANEL   EXEC PGM=IEBUPDTE,PARM=NEW,COND=(0,NE)",
      "//SYSPRINT DD SYSOUT=*",
      "//SYSUT2   DD DSN=HERC01.ZMG4.PLIB,DISP=(NEW,CATLG),UNIT=SYSDA,",
      "//            SPACE=(TRK,(5,5,5)),DCB=(RECFM=FB,LRECL=80,BLKSIZE=3120)",
-     "//SYSIN    DD DATA,DLM=@@"] + members("ZMGP") + [
+     "//SYSIN    DD DATA,DLM=@@"] + members("ZMGP", "ZMGQ") + [
      "//PROC    EXEC PGM=IEBUPDTE,PARM=MOD,COND=(0,NE)",
      "//SYSPRINT DD SYSOUT=*",
      "//SYSUT1   DD DSN=SYS1.PROCLIB,DISP=SHR",
