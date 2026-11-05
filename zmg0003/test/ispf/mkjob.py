@@ -3,12 +3,12 @@
 
     mkjob.py OUTPUT.jcl [--trace] [--nofilter] [--mvsce]
 
-It links the new IKJCT441 into HERC01.ZMG4.LOAD under its own name (ISPF LOADs
+It links the new IKJCT441 into HERC01.ZMG3.LOAD under its own name (ISPF LOADs
 IKJCT441 by name, so STEPLIB comes before the LPA and no CLPA is needed), loads
 the test CLISTs, execs and the panel, and REPLACES SYS1.PROCLIB(ISPLOGON) with
 a logon procedure that has those libraries and BREXX370.DEV.LINKLIB in front.
 --mvsce targets MVS/CE: user IBMUSER, ISPF in SYSGEN.ISPF.*, the logon procedure
-IKJACCNT, and ISPF started with EX 'IBMUSER.ZMG4.EXEC(ISPZ)' so that the test
+IKJACCNT, and ISPF started with EX 'IBMUSER.ZMG3.EXEC(ISPZ)' so that the test
 libraries come first. Only for a throwaway system. --trace makes IKJCT441 TPUT the start and end of
 each locate-all sequence and every update.
 """
@@ -98,14 +98,14 @@ if "--trace" in sys.argv:
     i = [k for k, l in enumerate(src) if l.startswith("         TITLE ' CONSTANTS AND LITERALS '")][0]
     src[i:i] = ["         USING WORKAREA,R13", "TRMVN    MVC   TRMSG+4(0),0(R2)", "TRMVV    MVC   TRMSG+18(0),0(R2)", "         DROP  R13"]
 
-j = ["//ZMG4SET JOB (1),'ZMG4 ISPF',CLASS=A,MSGCLASS=H,MSGLEVEL=(1,1),",
+j = ["//ZMG3SET JOB (1),'ZMG3 ISPF',CLASS=A,MSGCLASS=H,MSGLEVEL=(1,1),",
      "//         REGION=8192K",
      "//DEL     EXEC PGM=IEFBR14",
-     "//D1 DD DSN=HERC01.ZMG4.LOAD,DISP=(MOD,DELETE),UNIT=SYSDA,",
+     "//D1 DD DSN=HERC01.ZMG3.LOAD,DISP=(MOD,DELETE),UNIT=SYSDA,",
      "//   SPACE=(TRK,1)",
-     "//D2 DD DSN=HERC01.ZMG4.EXEC,DISP=(MOD,DELETE),UNIT=SYSDA,",
+     "//D2 DD DSN=HERC01.ZMG3.EXEC,DISP=(MOD,DELETE),UNIT=SYSDA,",
      "//   SPACE=(TRK,1)",
-     "//D3 DD DSN=HERC01.ZMG4.PLIB,DISP=(MOD,DELETE),UNIT=SYSDA,",
+     "//D3 DD DSN=HERC01.ZMG3.PLIB,DISP=(MOD,DELETE),UNIT=SYSDA,",
      "//   SPACE=(TRK,1)",
      "//ASM     EXEC PGM=IFOX00,PARM='OBJECT,NODECK,NOTERM,XREF(SHORT),RENT'",
      "//SYSLIB   DD DSN=SYS1.MACLIB,DISP=SHR",
@@ -123,7 +123,7 @@ j = ["//ZMG4SET JOB (1),'ZMG4 ISPF',CLASS=A,MSGCLASS=H,MSGLEVEL=(1,1),",
      "//SYSUT1   DD UNIT=VIO,SPACE=(CYL,1)",
      "//SYSLPA   DD DSN=SYS1.LPALIB,DISP=SHR",
      "//OBJ      DD DSN=&&O441,DISP=(OLD,DELETE)",
-     "//SYSLMOD  DD DSN=HERC01.ZMG4.LOAD(IKJCT441),DISP=(NEW,CATLG),",
+     "//SYSLMOD  DD DSN=HERC01.ZMG3.LOAD(IKJCT441),DISP=(NEW,CATLG),",
      "//            UNIT=SYSDA,SPACE=(CYL,(2,1,5)),",
      "//            DCB=(RECFM=U,BLKSIZE=19069)",
      "//SYSLIN   DD *",
@@ -135,13 +135,13 @@ j = ["//ZMG4SET JOB (1),'ZMG4 ISPF',CLASS=A,MSGCLASS=H,MSGLEVEL=(1,1),",
      "/*",
      "//EXEC    EXEC PGM=IEBUPDTE,PARM=NEW,COND=(0,NE)",
      "//SYSPRINT DD SYSOUT=*",
-     "//SYSUT2   DD DSN=HERC01.ZMG4.EXEC,DISP=(NEW,CATLG),UNIT=SYSDA,",
+     "//SYSUT2   DD DSN=HERC01.ZMG3.EXEC,DISP=(NEW,CATLG),UNIT=SYSDA,",
      "//            SPACE=(TRK,(5,5,5)),DCB=(RECFM=FB,LRECL=80,BLKSIZE=3120)",
      "//SYSIN    DD DATA,DLM=@@"] + members(
          "C1", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "C8", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "TA", "TB", "TC", "TD", "F1", "F5", "TE4", "CW", "G1", "G3", "H1", "H3", "ISPZ") + [
      "//PANEL   EXEC PGM=IEBUPDTE,PARM=NEW,COND=(0,NE)",
      "//SYSPRINT DD SYSOUT=*",
-     "//SYSUT2   DD DSN=HERC01.ZMG4.PLIB,DISP=(NEW,CATLG),UNIT=SYSDA,",
+     "//SYSUT2   DD DSN=HERC01.ZMG3.PLIB,DISP=(NEW,CATLG),UNIT=SYSDA,",
      "//            SPACE=(TRK,(5,5,5)),DCB=(RECFM=FB,LRECL=80,BLKSIZE=3120)",
      "//SYSIN    DD DATA,DLM=@@"] + members("ZMGP", "ZMGQ") + [
      "//PROC    EXEC PGM=IEBUPDTE,PARM=MOD,COND=(0,NE)",

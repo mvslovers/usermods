@@ -1,4 +1,5 @@
 Stage 1 measured after the build. Throwaway TK5, ISPF V2R2M0, BREXX/370 feature/irxexcom 9dbcf46,
+The usermod was still called ZMG0004 when this was measured; ZMG0003 is its name now.
 ZMG0001, ZMG0004 of this commit, 2026-11-05. twoscreens.sh (A C D E), after.sh, attention.sh.
 E is ECT+X'30' (ECTENVBK). WH2: U ECTUSER, R variable routine, W ENVBLOCK+X'130' X'134' X'138' X'13C',
 M largest piece of subpool 1. A, C, D, E ran before ZMGWHO got its second line.

@@ -7,7 +7,7 @@ ENVFILE holds MBT_TARGET_TN3270_HOST and _PORT. Script lines:
 wait N | show TAG | string TEXT | enter | pf N | pa N | clear | tab | home | move ROW COL (from 0) | raw ACTION
 run TIMEOUT TEXT: type TEXT, press Enter, print the line-mode output page by page
 until the screen is the TSO command panel again ("-" types nothing and only waits). If the screen shows a panel
-marked ZMG0004, it answers from the next "panel" lines: tab, string, enter.
+marked ZMG0003, it answers from the next "panel" lines: tab, string, enter.
 """
 import subprocess
 import sys
@@ -55,7 +55,7 @@ def run(timeout, text):
     while time.time() < end:
         s = lines()
         body = [x for x in s if x.strip()]
-        if any("ZMG0004" in x for x in body):
+        if any("ZMG0003" in x for x in body):
             return
         if body and body[-1].strip() == "***":
             for x in body[:-1]:

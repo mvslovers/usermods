@@ -181,7 +181,7 @@ python3 "$HERE/mkjob.py" set.jcl > /dev/null; sub set.jcl
 python3 "$HERE/mkwho.py" add.jcl --add; sub add.jcl
 for m in XS1 XS2 XS3 XS4 XQ XP XC XN1 XN2 XN3 XN4 XN5 XN6 XU XA XB XV XR XD XM; do
   curl -s -m 30 -u "$AUTH" -X PUT -H 'Content-Type: text/plain' --data-binary @"$HERE/lib/$m" \
-    "$URL/zosmf/restfiles/ds/HERC01.ZMG4.EXEC($m)" -o /dev/null -w "$m=%{http_code} "
+    "$URL/zosmf/restfiles/ds/HERC01.ZMG3.EXEC($m)" -o /dev/null -w "$m=%{http_code} "
 done; echo
 for c in $CASES; do
   kick

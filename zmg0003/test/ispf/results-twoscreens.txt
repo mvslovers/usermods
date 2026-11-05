@@ -1,4 +1,5 @@
 Two ISPF logical screens with real BREXX/370 execs (feature/irxexcom b6862b0), ZMG0001,
+The usermod was still called ZMG0004 when this was measured; ZMG0003 is its name now.
 ZMG0004 (zmg0004/ispf-test), throwaway TK5, ISPF V2R2M0, 2026-11-04. twoscreens.sh, no trace.
 E is ECT+X'30' (ECTENVBK). Cases: A both execs alive on return to screen 1; C exec 1 ends
 while exec 2 is alive; D exec 2 ended before the return; E a CLIST dialog on screen 2.

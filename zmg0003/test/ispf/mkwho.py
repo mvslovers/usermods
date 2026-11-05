@@ -30,7 +30,7 @@ panel = [")BODY", "%ZMGWHO TEST PANEL", "%COMMAND ===>_ZCMD", "+", ")END"]
 proc = [l for l in open(os.path.join(HERE, "lib", "ISPLOGON")).read().rstrip("\n").split("\n")
         if "BREXX370" not in l]
 i = [k for k, l in enumerate(proc) if l.startswith("//SYSPROC")][0]
-proc[i:i + 1] = ["//SYSPROC  DD  DISP=SHR,DSN=HERC01.ZMG4.EXEC", "//         DD  DISP=SHR,DSN=SYS1.CMDPROC"]
+proc[i:i + 1] = ["//SYSPROC  DD  DISP=SHR,DSN=HERC01.ZMG3.EXEC", "//         DD  DISP=SHR,DSN=SYS1.CMDPROC"]
 
 
 def asm(name, src):
@@ -46,7 +46,7 @@ def asm(name, src):
             "//SYSPRINT DD SYSOUT=*",
             "//SYSUT1   DD UNIT=VIO,SPACE=(CYL,1)",
             "//SYSLIN   DD DSN=&&OBJ,DISP=(OLD,DELETE)",
-            f"//SYSLMOD  DD DSN=HERC01.ZMG4.LOAD({name}),DISP=SHR"]
+            f"//SYSLMOD  DD DSN=HERC01.ZMG3.LOAD({name}),DISP=SHR"]
 
 
 def upd(dsn, mem):
@@ -61,24 +61,24 @@ def upd(dsn, mem):
 panels = {"ZMGS": panel,
           "ZMGT": [")BODY", "%ZMGT TEST PANEL", "%COMMAND ===>_ZCMD", "+FIELD   ===>_FLD ", "+", ")END"]}
 ADD = "--add" in sys.argv
-j = ["//ZMG4WHO JOB (1),'ZMG4 WHO',CLASS=A,MSGCLASS=H,MSGLEVEL=(1,1),",
+j = ["//ZMG3WHO JOB (1),'ZMG3 WHO',CLASS=A,MSGCLASS=H,MSGLEVEL=(1,1),",
      "//         REGION=4096K"]
 if ADD:
-    j += asm("ZMGWHO", who) + upd("HERC01.ZMG4.PLIB", panels)
+    j += asm("ZMGWHO", who) + upd("HERC01.ZMG3.PLIB", panels)
     open(sys.argv[1], "w").write("\n".join((x + " " * 80)[:80] for x in j) + "\n")
     sys.exit(0)
 j += ["//DEL     EXEC PGM=IEFBR14"]
 for k, d in (("D1", "LOAD"), ("D2", "EXEC"), ("D3", "PLIB")):
-    j += [f"//{k} DD DSN=HERC01.ZMG4.{d},DISP=(MOD,DELETE),UNIT=SYSDA,", "//   SPACE=(TRK,1)"]
+    j += [f"//{k} DD DSN=HERC01.ZMG3.{d},DISP=(MOD,DELETE),UNIT=SYSDA,", "//   SPACE=(TRK,1)"]
 j += ["//ALC     EXEC PGM=IEFBR14",
-      "//A1 DD DSN=HERC01.ZMG4.LOAD,DISP=(NEW,CATLG),UNIT=SYSDA,",
+      "//A1 DD DSN=HERC01.ZMG3.LOAD,DISP=(NEW,CATLG),UNIT=SYSDA,",
       "//   SPACE=(TRK,(10,5,5)),DCB=(RECFM=U,BLKSIZE=19069)",
-      "//A2 DD DSN=HERC01.ZMG4.EXEC,DISP=(NEW,CATLG),UNIT=SYSDA,",
+      "//A2 DD DSN=HERC01.ZMG3.EXEC,DISP=(NEW,CATLG),UNIT=SYSDA,",
       "//   SPACE=(TRK,(5,5,5)),DCB=(RECFM=FB,LRECL=80,BLKSIZE=3120)",
-      "//A3 DD DSN=HERC01.ZMG4.PLIB,DISP=(NEW,CATLG),UNIT=SYSDA,",
+      "//A3 DD DSN=HERC01.ZMG3.PLIB,DISP=(NEW,CATLG),UNIT=SYSDA,",
       "//   SPACE=(TRK,(5,5,5)),DCB=(RECFM=FB,LRECL=80,BLKSIZE=3120)"]
 j += asm("ZMGWHO", who) + asm("ZMGABND", abnd) + asm("ZMGSET", zset)
-j += upd("HERC01.ZMG4.EXEC", clists) + upd("HERC01.ZMG4.PLIB", panels)
+j += upd("HERC01.ZMG3.EXEC", clists) + upd("HERC01.ZMG3.PLIB", panels)
 j += ["//PROC    EXEC PGM=IEBUPDTE,PARM=MOD", "//SYSPRINT DD SYSOUT=*",
       "//SYSUT1   DD DSN=SYS1.PROCLIB,DISP=SHR", "//SYSUT2   DD DSN=SYS1.PROCLIB,DISP=SHR",
       "//SYSIN    DD DATA,DLM=@@", "./ REPL NAME=ISPLOGON"] + proc + ["./ ENDUP", "@@"]

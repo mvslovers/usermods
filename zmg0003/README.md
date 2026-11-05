@@ -1,8 +1,8 @@
-# ZMG0004 — IKJCT441 for REXX
+# ZMG0003 — IKJCT441 for REXX
 
 `IKJCT441` with a REXX path: the variable access routine serves the variables
 of a running REXX exec as well as CLIST variables, so ISPF dialog variables
-work from REXX. Design: [`internals/ZMG0004.md`](../internals/ZMG0004.md).
+work from REXX. Design: [`internals/ZMG0003.md`](../internals/ZMG0003.md).
 
 Status: written and tested with BREXX/370 3.1.0 stage 1, **not ready**. No usermod packaging yet (MCS, jobs),
 and there is an open defect under ISPF:
@@ -48,7 +48,7 @@ The routine is called only through the address in `IRXEXTE`, with the
 `IRXEXCOM`, a parameter value and not a module name) and R0 -> `ENVBLOCK`.
 
 Two changes on the CLIST side: the module identifies itself as
-`IKJCT441 ZMG0004`, and without an LWA (not under a TMP) it returns RC=40
+`IKJCT441 ZMG0003`, and without an LWA (not under a TMP) it returns RC=40
 instead of reading low storage.
 
 ## Limits of ISPF that a dialog meets

@@ -14,12 +14,18 @@ next to that product and is listed here with a link.
 |---|---|---|---|---|---|
 | `ZMG0001` | BREXX/370 in TSO: `EXEC`, `%name` and `name` run an exec through BREXX/370 when its first line is `/* REXX */` | `IKJCT430` (EXEC), new `IKJCT437` | `PRE(UY16532)` | [mvslovers/brexx370](https://github.com/mvslovers/brexx370/tree/master/tso) | released with BREXX/370 3.0.0 |
 | `ZMG0002` | REKX/370 (rekx370) in TSO: the same for REKX/370 | `IKJEFT01`, `IKJCT430` (EXEC), new `IKJEFTRX`, `IKJCT437` | `PRE(UY16532,UY13431)` | [mvslovers/rekx370](https://github.com/mvslovers/rekx370/tree/main/tso) | not yet released |
-| `ZMG0003` | Both REXX side by side in TSO | EXEC | | | planned |
-| `ZMG0004` | `IKJCT441` for REXX: the variable access routine serves the variables of a running REXX exec as well as CLIST variables, so ISPF dialog variables work from REXX | `IKJCT441` in `IKJPTGT` | `PRE(ZP60038)` | [this repository](zmg0004/) | in development |
+| `ZMG0003` | `IKJCT441` for REXX: the variable access routine serves the variables of a running REXX exec as well as CLIST variables, so ISPF dialog variables work from REXX | `IKJCT441` in `IKJPTGT` | `PRE(ZP60038)` | [this repository](zmg0003/) | in development |
 
-**`ZMG0001`, `ZMG0002` and `ZMG0003` exclude each other**: all three change
-the TSO `EXEC` command. `ZMG0004` changes none of their elements and can be
-installed with any of them.
+**`ZMG0001` and `ZMG0002` exclude each other**: both change the TSO `EXEC`
+command. `ZMG0003` changes none of their elements and can be installed with
+either of them.
+
+**`ZMG0003` was reserved until 2026-11-05 for a usermod running both REXX side
+by side, which was never built or shipped, and this usermod was called
+`ZMG0004` during development.** The texts of BREXX/370 3.0.0 still give
+`ZMG0003` the old meaning and its check job `ZMG01CK` lists it as one that must
+not be installed; for the `IKJCT441` usermod that does not apply. Should a
+side-by-side usermod come after all, it gets a new id. `ZMG0004` is spent.
 
 ## Conventions
 
@@ -35,5 +41,5 @@ installed with any of them.
 - **Usermods are never accepted.** They stay removable with `RESTORE`.
 - **The `IRX*` namespace belongs to REKX/370.** No usermod here ships a
   module, alias or entry point named `IRX*`, and none loads or links one by
-  name. `ZMG0004` reaches the REXX variable interface only through the
+  name. `ZMG0003` reaches the REXX variable interface only through the
   environment block of the running exec.

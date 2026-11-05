@@ -1,4 +1,5 @@
 Attention (PA1) while a published BREXX/370 exec loops. Throwaway TK5, ISPF V2R2M0, BREXX
+The usermod was still called ZMG0004 when this was measured; ZMG0003 is its name now.
 feature/irxexcom b6862b0, ZMG0001, ZMG0004 (zmg0004/ispf-test), 2026-11-04. attention.sh.
 E is ECT+X'30' (ECTENVBK). Baseline before the exec: E=00000000.
 === READY
