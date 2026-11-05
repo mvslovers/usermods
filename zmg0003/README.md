@@ -52,6 +52,8 @@ on TK5:
   with RC 0 and the inventory says `RESTORED`. This updates the distribution library
   `SYS1.AOST4` and cannot be taken back with `RESTORE`, so back it up first; whether to do it
   is the decision of whoever runs the system. No IPL and no dialog ran after this way.
+  TK5 does not accept usermods: what is accepted is in the distribution libraries, and a
+  later SYSGEN would build from them. So on TK5 the first way is the one that applies.
 
 ## The REXX path
 
