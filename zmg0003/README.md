@@ -32,6 +32,27 @@ the first call. Reported to the author of ISPF.
 then `OLD` it gets its value back, the same in a CLIST and in REXX (`test/ispf/results-after.txt`,
 `XB`, `XU`, `XC`, `XA`). Whether it is the length of the values is not isolated.
 
+## Install and removal
+
+`python3 zmg0003/usermod.py [--xmit]` builds the library `USERMOD.ZMG0003`. Run its jobs
+in this order: `ZMG03CK`, `ZMG03BK`, `$INSTALL`, `ZMG03AP`. Step `REJ` of `$INSTALL` ends
+with RC 12 on a first install; that is expected. The usermod is active after the next IPL
+with CLPA. A return code does not prove the module: `test/lmodcmp.py` compares it with the
+tested one (`test/results-package.txt`).
+
+`ZMG03RS` removes the usermod, active after the next IPL with CLPA. Both ways were measured
+on TK5:
+
+- **`ZP60038` not accepted, the state of TK5 and MVS/CE.** `RESTORE` ends with RC 12
+  (HMA3022, `ZP60038` is a missing requisite). Step `COPY` still brings back `IKJPTGT` from
+  the backup of `ZMG03BK`, which is what the system then runs. `ZMG0003` stays in the SMP
+  inventory.
+- **`ZP60014` and `ZP60038` accepted first**, with `ACCEPT SELECT(ZP60014,ZP60038) USERMODS`
+  under the `SMPACC` procedure (RC 4; without `USERMODS` RC 12, HMA3652). `RESTORE` then ends
+  with RC 0 and the inventory says `RESTORED`. This updates the distribution library
+  `SYS1.AOST4` and cannot be taken back with `RESTORE`, so back it up first; whether to do it
+  is the decision of whoever runs the system. No IPL and no dialog ran after this way.
+
 ## The REXX path
 
 At `REDRIVE` the module looks for a routine: ECT+X'30' points to an `ENVBLOCK` of at
