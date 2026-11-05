@@ -2,8 +2,8 @@ Stage 1 measured after the build. Throwaway TK5, ISPF V2R2M0, BREXX/370 feature/
 ZMG0001, ZMG0004 of this commit, 2026-11-05. twoscreens.sh (A C D E), after.sh, attention.sh.
 E is ECT+X'30' (ECTENVBK). WH2: U ECTUSER, R variable routine, W ENVBLOCK+X'130' X'134' X'138' X'13C',
 M largest piece of subpool 1. A, C, D, E ran before ZMGWHO got its second line.
-OPEN: VPUT, change V, VGET leaves V changed (RC=0) in XN2 and XU (REXX) and in XN6 (CLIST called from a
-CLIST), but not in XC (CLIST alone). With a DISPLAY between (XS1) REXX gets the value. Cause not established.
+VPUT, change V, VGET without a DISPLAY between depends on the values, not on the language: INNER then CLOBBER
+keeps CLOBBER in REXX (XU) and in a CLIST (XB), FROMX then OLD gets the value back in REXX (XA) and in a CLIST (XC).
 XV and XR: a failed VGET blanks the variable, the same in CLIST and REXX.
 === A
 --- s1-start
@@ -545,6 +545,86 @@ XV and XR: a failed VGET blanks the variable, the same in CLIST and REXX.
    =>
    /C Controls: ExecI N   ClrCMD Y   UpdtSA Y   RBlank Y      DelChr /
    ** CommSA and Controls Refreshed
+--- XB
+ XB VPUT RC=0
+ XB VGET RC=0 V=CLOBBER
+ ***
+--- XB-2
+ ---------------------------  TSO COMMAND PROCESSOR  ----------------- v2.0.01 -
+ ENTER TSO COMMAND, CLIST, OR REXX EXEC BELOW:
+ ===>
+   Use command C6TUTOR for tutorial
+   Place cursor on choice and press ENTER to Retrieve Command
+   => ISPEXEC SELECT CMD(%XB)
+   => ISPEXEC SELECT CMD(%XC)
+   => ISPEXEC SELECT CMD(%XU)
+   => ISPEXEC SELECT CMD(%XN2)
+   => ISPEXEC SELECT CMD(%XN5)
+   =>
+   =>
+   =>
+   =>
+   =>
+   /C Controls: ExecI N   ClrCMD Y   UpdtSA Y   RBlank Y      DelChr /
+   ** TSO Command Executed  ISPEXEC SELECT CMD(%XB) (10)
+--- XB-3
+ ---------------------------  TSO COMMAND PROCESSOR  ----------------- v2.0.01 -
+ ENTER TSO COMMAND, CLIST, OR REXX EXEC BELOW:
+ ===>
+   Use command C6TUTOR for tutorial
+   Place cursor on choice and press ENTER to Retrieve Command
+   => ISPEXEC SELECT CMD(%XB)
+   => ISPEXEC SELECT CMD(%XC)
+   => ISPEXEC SELECT CMD(%XU)
+   => ISPEXEC SELECT CMD(%XN2)
+   => ISPEXEC SELECT CMD(%XN5)
+   =>
+   =>
+   =>
+   =>
+   =>
+   /C Controls: ExecI N   ClrCMD Y   UpdtSA Y   RBlank Y      DelChr /
+   ** CommSA and Controls Refreshed
+--- XA
+ XA VPUT RC=0
+ XA VGET RC=0 V=FROMXA
+ ***
+--- XA-2
+ ---------------------------  TSO COMMAND PROCESSOR  ----------------- v2.0.01 -
+ ENTER TSO COMMAND, CLIST, OR REXX EXEC BELOW:
+ ===>
+   Use command C6TUTOR for tutorial
+   Place cursor on choice and press ENTER to Retrieve Command
+   => ISPEXEC SELECT CMD(%XA)
+   => ISPEXEC SELECT CMD(%XB)
+   => ISPEXEC SELECT CMD(%XC)
+   => ISPEXEC SELECT CMD(%XU)
+   => ISPEXEC SELECT CMD(%XN2)
+   => ISPEXEC SELECT CMD(%XN5)
+   =>
+   =>
+   =>
+   =>
+   /C Controls: ExecI N   ClrCMD Y   UpdtSA Y   RBlank Y      DelChr /
+   ** TSO Command Executed  ISPEXEC SELECT CMD(%XA) (10)
+--- XA-3
+ ---------------------------  TSO COMMAND PROCESSOR  ----------------- v2.0.01 -
+ ENTER TSO COMMAND, CLIST, OR REXX EXEC BELOW:
+ ===>
+   Use command C6TUTOR for tutorial
+   Place cursor on choice and press ENTER to Retrieve Command
+   => ISPEXEC SELECT CMD(%XA)
+   => ISPEXEC SELECT CMD(%XB)
+   => ISPEXEC SELECT CMD(%XC)
+   => ISPEXEC SELECT CMD(%XU)
+   => ISPEXEC SELECT CMD(%XN2)
+   => ISPEXEC SELECT CMD(%XN5)
+   =>
+   =>
+   =>
+   =>
+   /C Controls: ExecI N   ClrCMD Y   UpdtSA Y   RBlank Y      DelChr /
+   ** CommSA and Controls Refreshed
 --- XV
  XV CLIST RC=8 NOVAR=
  ***
@@ -555,12 +635,12 @@ XV and XR: a failed VGET blanks the variable, the same in CLIST and REXX.
    Use command C6TUTOR for tutorial
    Place cursor on choice and press ENTER to Retrieve Command
    => ISPEXEC SELECT CMD(%XV)
+   => ISPEXEC SELECT CMD(%XA)
+   => ISPEXEC SELECT CMD(%XB)
    => ISPEXEC SELECT CMD(%XC)
    => ISPEXEC SELECT CMD(%XU)
    => ISPEXEC SELECT CMD(%XN2)
    => ISPEXEC SELECT CMD(%XN5)
-   =>
-   =>
    =>
    =>
    =>
@@ -573,12 +653,12 @@ XV and XR: a failed VGET blanks the variable, the same in CLIST and REXX.
    Use command C6TUTOR for tutorial
    Place cursor on choice and press ENTER to Retrieve Command
    => ISPEXEC SELECT CMD(%XV)
+   => ISPEXEC SELECT CMD(%XA)
+   => ISPEXEC SELECT CMD(%XB)
    => ISPEXEC SELECT CMD(%XC)
    => ISPEXEC SELECT CMD(%XU)
    => ISPEXEC SELECT CMD(%XN2)
    => ISPEXEC SELECT CMD(%XN5)
-   =>
-   =>
    =>
    =>
    =>
@@ -595,12 +675,12 @@ XV and XR: a failed VGET blanks the variable, the same in CLIST and REXX.
    Place cursor on choice and press ENTER to Retrieve Command
    => ISPEXEC SELECT CMD(%XR)
    => ISPEXEC SELECT CMD(%XV)
+   => ISPEXEC SELECT CMD(%XA)
+   => ISPEXEC SELECT CMD(%XB)
    => ISPEXEC SELECT CMD(%XC)
    => ISPEXEC SELECT CMD(%XU)
    => ISPEXEC SELECT CMD(%XN2)
    => ISPEXEC SELECT CMD(%XN5)
-   =>
-   =>
    =>
    =>
    /C Controls: ExecI N   ClrCMD Y   UpdtSA Y   RBlank Y      DelChr /
@@ -613,12 +693,12 @@ XV and XR: a failed VGET blanks the variable, the same in CLIST and REXX.
    Place cursor on choice and press ENTER to Retrieve Command
    => ISPEXEC SELECT CMD(%XR)
    => ISPEXEC SELECT CMD(%XV)
+   => ISPEXEC SELECT CMD(%XA)
+   => ISPEXEC SELECT CMD(%XB)
    => ISPEXEC SELECT CMD(%XC)
    => ISPEXEC SELECT CMD(%XU)
    => ISPEXEC SELECT CMD(%XN2)
    => ISPEXEC SELECT CMD(%XN5)
-   =>
-   =>
    =>
    =>
    /C Controls: ExecI N   ClrCMD Y   UpdtSA Y   RBlank Y      DelChr /

@@ -166,7 +166,7 @@ show after-display
 EOF
 }
 # controls: what ISPF does in plain CLISTs and alone
-NESTCTL() { logon; run XN5 10; run XN2 8; run XU 6; run XC 6; run XV 6; run XR 6; }
+NESTCTL() { logon; run XN5 10; run XN2 8; run XU 6; run XC 6; run XB 6; run XA 6; run XV 6; run XR 6; }
 # twenty dialogs in a row on one screen, and twenty ISPEXEC calls in one exec
 MEMORY() { logon; who before; i=1; while [ $i -le 20 ]; do cat <<'EOF'
 string ISPEXEC SELECT CMD(%XQ)
@@ -179,7 +179,7 @@ EOF
 kick
 python3 "$HERE/mkjob.py" set.jcl > /dev/null; sub set.jcl
 python3 "$HERE/mkwho.py" add.jcl --add; sub add.jcl
-for m in XS1 XS2 XS3 XS4 XQ XP XC XN1 XN2 XN3 XN4 XN5 XN6 XU XV XR XD XM; do
+for m in XS1 XS2 XS3 XS4 XQ XP XC XN1 XN2 XN3 XN4 XN5 XN6 XU XA XB XV XR XD XM; do
   curl -s -m 30 -u "$AUTH" -X PUT -H 'Content-Type: text/plain' --data-binary @"$HERE/lib/$m" \
     "$URL/zosmf/restfiles/ds/HERC01.ZMG4.EXEC($m)" -o /dev/null -w "$m=%{http_code} "
 done; echo

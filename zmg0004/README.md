@@ -24,6 +24,11 @@ the first call. Reported to the author of ISPF.
 | `test/results-tk5.txt` | The driver's output from TK5 |
 | `test/ispf/results-after.txt` | Real BREXX/370 execs under ISPF: two screens, nesting, attention, storage |
 
+**Also in ISPF, seen 2026-11-05.** `VPUT`, a change of the variable and `VGET` with no
+`DISPLAY` between: with `INNER` then `CLOBBER` the variable keeps `CLOBBER`, with `FROMXC`
+then `OLD` it gets its value back, the same in a CLIST and in REXX (`test/ispf/results-after.txt`,
+`XB`, `XU`, `XC`, `XA`). Whether it is the length of the values is not isolated.
+
 ## The REXX path
 
 At `REDRIVE` the module looks for a routine: ECT+X'30' points to an `ENVBLOCK` of at
