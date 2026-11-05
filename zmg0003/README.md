@@ -37,7 +37,9 @@ then `OLD` it gets its value back, the same in a CLIST and in REXX (`test/ispf/r
 `python3 zmg0003/usermod.py [--xmit]` builds the library `USERMOD.ZMG0003`. Run its jobs
 in this order: `ZMG03CK`, `ZMG03BK`, `$INSTALL`, `ZMG03AP`. Step `REJ` of `$INSTALL` ends
 with RC 12 on a first install; that is expected. The usermod is active after the next IPL
-with CLPA. A return code does not prove the module: `test/lmodcmp.py` compares it with the
+with CLPA. On MVS/CE that means answering `IEA101A` with `r 00,clpa`: its `IEASYS00` has no
+`CLPA` and a plain IPL keeps the old module without any message. The TK5 image has `CLPA` in
+`IEASYS00`, so every IPL there is one. A return code does not prove the module: `test/lmodcmp.py` compares it with the
 tested one (`test/results-package.txt`).
 
 **Accept the requisites first, so that `RESTORE` can take the usermod out again.** `ZMG0003`
@@ -54,8 +56,8 @@ HMA3652.
 The MVS/CE list is the whole requisite chain of `ZP60038` not yet accepted there; TK5 has
 the rest accepted already. On both, measured from a fresh system: `ACCEPT` leaves `IKJPTGT`
 unchanged, `$INSTALL` and `ZMG03AP` run as usual, and `ZMG03RS` ends with `RESTORE` RC 0 and
-`IKJPTGT` as it was before the install. TSO came up after the IPL with CLPA, and a second
-install gave the same module. No ISPF dialog ran on this path.
+`IKJPTGT` as it was before the install, also with `RESTORE` alone, without step `COPY`. TSO
+came up after an IPL with CLPA (console checked), and a second install gave the same module. No ISPF dialog ran on this path.
 
 `ZMG03RS` removes the usermod, active after the next IPL with CLPA.
 

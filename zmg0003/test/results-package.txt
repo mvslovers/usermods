@@ -62,7 +62,9 @@ Object decks: IFOX00 on TK5 and on MVS/CE give the same 52 cards (ESD, 49 TXT, R
 columns 1-72 except the END card: ASM370 0100 against 15741SC103 0201.
 
 Requisites accepted before the install, 2026-11-05. Fresh throwaway TK5 and MVS/CE: ZMG03CK, ZMG03BK, ACCEPT, $INSTALL,
-ZMG03AP, ZMG03RS, IPL with CLPA, $INSTALL, ZMG03AP, with AMBLIST of SYS1.LPALIB(IKJPTGT) after each stage.
+ZMG03AP, ZMG03RS, IPL, $INSTALL, ZMG03AP, with AMBLIST of SYS1.LPALIB(IKJPTGT) after each stage. That IPL was a
+CLPA IPL on TK5 only (IEASYS00 has CLPA). MVS/CE has none and answers IEA101A empty, so there it kept the old PLPA:
+see "Repeated with a real CLPA" below.
 
 TK5, SMPACC, SELECT(ZP60014,ZP60038) USERMODS: RC 4, HMA2270 for both.
 MVS/CE, SMPAPP, there is no SMPACC. SELECT(ZP60014,ZP60038) USERMODS: RC 12, HMA3022, UY16532, UY17021, UY01301 PRE.
@@ -82,3 +84,27 @@ second install vs first               equal         equal
 
 TSO answered after the IPL on both. No ISPF dialog on this path. Equal means per CSECT as in test/lmodcmp.py.
 Without the accept, for comparison, MVS/CE: RESTORE RC 12, HMA3022, ZP60038 PRE, as on TK5.
+
+Repeated with a real CLPA, 2026-11-05. The same order with fresh TK5 and MVS/CE, requisites accepted, SMP RESTORE
+alone (no step COPY, which would hide the result). MVS/CE: IEA101A answered with r 00,clpa, console shows R 00,CLPA.
+
+                                      TK5           MVS/CE
+RESTORE                               RC 0          RC 0
+IKJPTGT after RESTORE vs before       equal         equal
+TSO after the IPL                     logged on     logged on
+second install vs first               equal         equal
+
+A form with SUP(ZP60038) instead of PRE(ZP60038), not the form of this package, 2026-11-05. MCS with
+PRE(UY01301,ZP60014) SUP(ZP60038) and the ++JCLIN and ++MACUPD(SGIKJ441) of ZP60038. The jobs need a DD for AGENLIB:
+without it APPLY on TK5 with ZP60038 accepted ends with RC 12, HMA2832, and leaves ZMG0003 as REC APP ERR.
+
+Accepted before the install           RESTORE ZMG0003                     IKJPTGT after it
+requisites and ZP60038, TK5, MVS/CE   RC 0                                equal to before
+requisites only, TK5, MVS/CE          RC 12, HMA3022, ZP60038 SUPED       unchanged, ZMG0003 installed
+nothing, TK5, MVS/CE                  RC 12, HMA3022, ZP60038 SUPED, PRE  unchanged, ZMG0003 installed
+ZP60038 restored before the install   RC 0, no LINK message               unchanged, ZMG0003 installed
+
+Installed module, SUP form vs this package: equal on both. Second install vs first: equal in all cases. TSO logged
+on after each CLPA IPL. The last row: RESTORE of ZP60038 and of ZMG0003 both end with RC 0 and leave the module in
+place, since the distribution library has no IKJCT441 to link from; SMP then lists neither sysmod. A system that never
+had ZP60038 was not available to test.
