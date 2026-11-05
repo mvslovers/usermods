@@ -4,7 +4,7 @@
 of a running REXX exec as well as CLIST variables, so ISPF dialog variables
 work from REXX. Design: [`internals/ZMG0004.md`](../internals/ZMG0004.md).
 
-Status: written and tested, **not ready**. No usermod packaging yet (MCS, jobs),
+Status: written and tested with BREXX/370 3.1.0 stage 1, **not ready**. No usermod packaging yet (MCS, jobs),
 and there is an open defect under ISPF:
 
 **Open defect, in ISPF and not in this module.** A variable that first appears
@@ -19,22 +19,24 @@ the first call. Reported to the author of ISPF.
 | File | What it is |
 |---|---|
 | `IKJCT441.ASM` | The module. Greg Price's public-domain source from `ZP60038` (rework 2019-07-27) with the REXX path added; his header, author line and change log are kept |
-| `test/ZMGDRV.ASM` | Test driver, a TSO command processor: `C` CLIST regression, `R` REXX path, `O` which path wins inside a CLIST. It carries the stand-in REXX environment (`ENVBLOCK`, `IRXEXTE`, and `FAKEXCOM`, a variable routine over a small table that also checks how it is called) |
+| `test/ZMGDRV.ASM` | Test driver, a TSO command processor: `C` CLIST regression, `R` REXX path, `O` which path wins inside a CLIST, `F` reading a freed chunk. It carries the stand-in REXX environment (`ENVBLOCK`, `IRXEXTE`, and `FAKEXCOM`, a variable routine over a small table that also checks how it is called) |
 | `test/mktest.py` | Writes the test job: assembles both sources with IFOX00 on the target, links a private copy of the installed `IKJPTGT` with the new `IKJCT441` as `ZMGT441`, runs the driver in three batch TMP steps |
 | `test/results-tk5.txt` | The driver's output from TK5 |
+| `test/ispf/results-after.txt` | Real BREXX/370 execs under ISPF: two screens, nesting, attention, storage |
 
 ## The REXX path
 
-At `REDRIVE` the module checks whether a REXX exec is the caller: ECT+X'30'
-points to an `ENVBLOCK` of at least 320 bytes, its `IRXEXTE` has a variable
-access routine, and `ENVBLOCK`+X'130' holds the input stack element that is
-still on top. Then:
+At `REDRIVE` the module looks for a routine: ECT+X'30' points to an `ENVBLOCK` of at
+least 320 bytes, and its `IRXEXTE` has a variable access routine. That routine decides:
+R15 = -1 means no exec is the caller and the CLIST path runs, 28 and 32 give RC=40,
+otherwise `SHVRET` holds the result. Then:
 
 | Entry code | REXX path |
 |---|---|
 | 2 `TSVEUPDT` | SHVBLOCK `S` |
-| 3 `TSVELOC` | SHVBLOCK `N`, after one other request that restarts the `N` sequence. Names and values go into chunks chained from `ENVBLOCK`+X'134', freed when the next sequence starts, because ISPF copies the values only after RC=20. Names with a period are not returned; the sequence ends after 2,048 names of up to 8 bytes |
-| 1 `TSVERETR`, 18 `TSVNOIMP` | RC=40 for now: who owns the storage of a retrieved value is not decided yet. ISPF uses neither |
+| 3 `TSVELOC` | SHVBLOCK `N`, after one other request that restarts the `N` sequence. Names and values go into chunks chained from `ENVBLOCK`+X'134', freed when the next sequence starts if this task owns them (`ENVBLOCK`+X'138'), because ISPF copies the values only after RC=20. Names with a period are not returned; the sequence ends after 2,048 names of up to 8 bytes |
+| 1 `TSVERETR` | SHVBLOCK `F`; if the variable is new, `S` with the value of the caller, then `F` again. ISPF does not use it |
+| 18 `TSVNOIMP` | SHVBLOCK `F`; if the variable is new, RC=52. ISPF does not use it |
 
 The routine is called only through the address in `IRXEXTE`, with the
 `IRXEXCOM` parameter list (four entries; parameter 1 is the 8-byte string
@@ -74,8 +76,13 @@ Results on TK5 (`test/results-tk5.txt`):
   `IKJINIT` in the private copy), and a full locate-all.
 - **REXX path**: locate-all returns the stand-in's variables and ends with
   RC=20 and a zero token; an update shows in the next locate-all; a new
-  variable is created; retrieve gives RC=40, a name length of 0 RC=36; with a
-  stale top element the CLIST path runs (RC=40, no CLIST). `R7` reads the first
+  variable is created; a name length of 0 gives RC=36. Retrieve returns the value
+  (`R4`), an undefined name RC=52 (`R8`), retrieve/create takes the caller's value
+  only for a new variable (`R9`, `RA`), and a retrieved value survives the next
+  retrieve (`RB`). With -1 from the routine the CLIST path runs (`R6`: RC=40, no
+  CLIST; `O2` to `O4`: the CLIST is served, a whole locate-all included); 28 and 32
+  give RC=40 (`RE`, `RF`). Chunks owned by another task are not touched, even freed
+  ones (`RC`), and reading a freed chunk does abend, S0C4-11 (step `TMPF`). `R7` reads the first
   located value after RC=20; the first version of this module abends there. The
   stand-in counted no call that broke the contract.
 - **Which path wins inside a CLIST**: with the current top element recorded

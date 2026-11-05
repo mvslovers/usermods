@@ -10,6 +10,11 @@ ZMGWHO   TITLE 'ZMGWHO - SHOW TCB, ECT AND INPUT STACK OF THE CALLER'
 *    S  = TOP INPUT STACK ELEMENT (IOSTELM)
 *    N  = NUMBER OF ELEMENTS (IOSNELM)
 *    F  = FIRST BYTE OF THE TOP ELEMENT (INSCODE)
+*  AND A SECOND LINE:
+*    U  = ECT+X'20' (ECTUSER)
+*    R  = VARIABLE ROUTINE IN THE IRXEXTE OF THE ENVBLOCK AT E
+*    W  = ENVBLOCK+X'130', +X'134', +X'138', +X'13C' OF THAT BLOCK
+*    M  = LARGEST PIECE OF SUBPOOL 1 STORAGE THIS TASK CAN GET
 *
 ZMGWHO   CSECT
          STM   14,12,12(13)
@@ -62,6 +67,37 @@ ZMGWHO   CSECT
          LA    3,OF
          BAL   14,HEX
          TPUT  OUT,OUTL
+         L     0,X'20'(,4)         ECTUSER
+         LA    3,OU
+         BAL   14,HEX
+         ICM   7,15,X'30'(4)       ECTENVBK
+         BZ    NOENV
+         L     1,X'1C'(,7)         ENVBLOCK_IRXEXTE
+         L     0,X'10'(,1)         THE VARIABLE ROUTINE
+         LA    3,OR
+         BAL   14,HEX
+         L     0,X'130'(,7)
+         LA    3,OW1
+         BAL   14,HEX
+         L     0,X'134'(,7)
+         LA    3,OW2
+         BAL   14,HEX
+         L     0,X'138'(,7)
+         LA    3,OW3
+         BAL   14,HEX
+         L     0,X'13C'(,7)
+         LA    3,OW4
+         BAL   14,HEX
+NOENV    GETMAIN VC,LA=LAL,A=ANS,SP=1
+         LTR   15,15
+         BNZ   NOMEM
+         L     0,ANS+4             LENGTH
+         LA    3,OM
+         BAL   14,HEX
+         L     0,ANS+4
+         L     1,ANS
+         FREEMAIN RU,LV=(0),A=(1),SP=1
+NOMEM    TPUT  OUT2,OUT2L
          L     13,4(,13)
          LM    14,12,12(13)
          SLR   15,15
@@ -100,4 +136,23 @@ ON       DC    CL8' '
          DC    C' F='
 OF       DC    CL8' '
 OUTL     EQU   *-OUT
+OUT2     DS    0C
+         DC    C'WH2 U='
+OU       DC    CL8' '
+         DC    C' R='
+OR       DC    CL8'00000000'
+         DC    C' W='
+OW1      DC    CL8'00000000'
+         DC    C' '
+OW2      DC    CL8'00000000'
+         DC    C' '
+OW3      DC    CL8'00000000'
+         DC    C' '
+OW4      DC    CL8'00000000'
+         DC    C' M='
+OM       DC    CL8' '
+OUT2L    EQU   *-OUT2
+         DS    0F
+LAL      DC    F'4096',A(X'FFFFF8')
+ANS      DS    2F
          END   ZMGWHO
