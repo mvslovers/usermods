@@ -1,0 +1,35 @@
+SMP package of ZMG0003 measured, 2026-11-05. Throwaway TK5 and MVS/CE, BREXX/370 feature/irxexcom 9dbcf46.
+
+TK5: ZMG03CK, ZMG03BK, $INSTALL, ZMG03AP: RECEIVE and APPLY RC 0, HMA2390 for IKJPTGT in LPALIB. IPL with CLPA.
+ISPF with the module from the LPA: the private IKJCT441 deleted (HERC01.ZMG3.LOAD holds only ZMGWHO, ZMG_LPA=1):
+  A FLD=NEW1, C both orders ECTENVBK 0, D and E FLD=NEW3, REXX in REXX, 20 dialogs (largest block equal before and
+  after), PA1 at READY and in a loop under ISPF: as in results-after.txt.
+MVS/CE: the same jobs up to APPLY, RC 0, HMA2390. No ISPF run with real execs there.
+
+Status of the requisites, LIST CDS, both images: ZP60014 and ZP60038 REC APP, not accepted. TK5: UY16532 REC APP ACC.
+
+Removal, without accepting: ZMG03RS step SMP RC 12: HMA3022, HMA3590 ZP60038 PRE. Step COPY RC 0, IPL. The control:
+the dialog of case A, now with the IKJCT441 of ZP60038 and BREXX/370 3.1.0 stage 1 (the exec publishes ECTENVBK):
+--- s1-start
+ X1 START
+ WHO T=00995B38 P=00995DD8 G=0099B6E8 L=000A7CF4 C=000A7CF4 E=0023F0A0 I=000A9F9
+8 S=000A9FA8 N=00000000 F=00000080
+ WH2 U=00000000 R=002193F0 W=000A9FA8 00000000 00000000 00000000 M=00611000
+ X1 VPUT RC=8
+ BRX0003E - ABEND CAUGHT IN BREXX/370
+ USER HERC01    ISPEXEC   ABEND S0C1
+ EPA 000D0000  PSW 078D2000 00146578  ILC 02  INTC 0001
+ GR 0-3   00000008  0029308C  0017BDA4  00000008
+ GR 4-7   0014C198  000B8100  00148640  001484C0
+ GR 8-11  00148700  000B8000  00293000  00146528
+ GR 12-15 00146000  00293128  40146564  00000028
+ ***
+
+So the module in the LPA was what served the dialogs above, and the removal took effect. It also means:
+BREXX/370 3.1.0 stage 1 without ZMG0003 abends at the first ISPEXEC (caught as BRX0003E) on this system.
+ZMG0003 stays in the inventory in this case (LIST CDS: REC APP, NOGO PRE ZP60038).
+
+Removal, after accepting, TK5, no IPL and no dialog run afterwards:
+ACCEPT SELECT(ZP60014,ZP60038) RC 12 without the operand: HMA3652 CANNOT BE ACCEPTED UNLESS USERMODS IS SPECIFIED.
+ACCEPT SELECT(ZP60014,ZP60038) USERMODS with SMPACC: RC 4 (link RC 04 into AOST4), HMA2270 for both.
+RESTORE SELECT(ZMG0003) then: RC 0, HMA2390 for IKJPTGT, HMA2270, LIST shows RESTORED.

@@ -117,6 +117,9 @@ E() { pre XS3 XP; back NEW3; printf 'enter\nwait 4\npf 9\nwait 4\npf 3\nwait 5\n
 kick
 python3 "$HERE/mkjob.py" set.jcl > /dev/null; sub set.jcl
 python3 "$HERE/mkwho.py" add.jcl --add; sub add.jcl
+# ZMG_LPA=1: no private IKJCT441, so ISPF gets the one the SMP install put into the LPA
+[ -n "$ZMG_LPA" ] && curl -s -m 30 -u "$AUTH" -X DELETE "$URL/zosmf/restfiles/ds/HERC01.ZMG3.LOAD(IKJCT441)" -o /dev/null -w "private IKJCT441 deleted: %{http_code}\n"
+[ -n "$ZMG_LPA" ] && curl -s -m 30 -u "$AUTH" "$URL/zosmf/restfiles/ds/HERC01.ZMG3.LOAD/member" > lpa-members.json
 for m in XS1 XS2 XS3 XS4 XQ XP XC; do
   curl -s -m 30 -u "$AUTH" -X PUT -H 'Content-Type: text/plain' --data-binary @"$HERE/lib/$m" \
     "$URL/zosmf/restfiles/ds/HERC01.ZMG3.EXEC($m)" -o /dev/null -w "$m=%{http_code} "

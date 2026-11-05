@@ -4,8 +4,9 @@
 of a running REXX exec as well as CLIST variables, so ISPF dialog variables
 work from REXX. Design: [`internals/ZMG0003.md`](../internals/ZMG0003.md).
 
-Status: written and tested with BREXX/370 3.1.0 stage 1, **not ready**. No usermod packaging yet (MCS, jobs),
-and there is an open defect under ISPF:
+Status: written and tested with BREXX/370 3.1.0 stage 1, **not ready**. The library (`usermod.py`, `usermod/`, `jcl/`) is
+measured through SMP (`test/results-package.txt`); the check that the SMP-built module equals the tested one is still
+missing. There is an open defect under ISPF:
 
 **Open defect, in ISPF and not in this module.** A variable that first appears
 after the first `ISPEXEC` call of a dialog does not get its value back from `VGET`:
