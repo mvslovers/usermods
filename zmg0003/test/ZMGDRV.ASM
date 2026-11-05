@@ -1,4 +1,4 @@
-ZMGDRV   TITLE 'ZMG0004 TEST DRIVER FOR IKJCT441'
+ZMGDRV   TITLE 'ZMG0003 TEST DRIVER FOR IKJCT441'
 *
 *  NAME        - ZMGDRV
 *
@@ -14,9 +14,12 @@ ZMGDRV   TITLE 'ZMG0004 TEST DRIVER FOR IKJCT441'
 *                OPERAND R: REXX PATH, OUTSIDE ANY CLIST, AGAINST A
 *                  STAND-IN REXX ENVIRONMENT (ENVBLOCK, IRXEXTE AND
 *                  THE VARIABLE ROUTINE FAKEXCOM BELOW).
-*                OPERAND O: WHICH PATH WINS INSIDE A CLIST, WITH THE
-*                  STAND-IN ENVIRONMENT RECORDING THE CURRENT TOP
-*                  ELEMENT (REXX) OR ANOTHER ONE (CLIST).
+*                OPERAND O: WHICH PATH WINS INSIDE A CLIST: THE
+*                  STAND-IN ROUTINE SERVES (REXX), OR ANSWERS -1
+*                  (CLIST ON TOP), ALSO FOR A WHOLE LOCATE SEQUENCE.
+*                OPERAND F: DOES READING A FREED CHUNK ABEND?  THE
+*                  REASON WHY THE OWNER OF THE CHUNKS IS NOT KEPT IN
+*                  THE CHUNK.  RUN LAST, IN A STEP OF ITS OWN.
 *
 *  NOT REENTRANT.  TEST CODE, NOT SHIPPED.
 *
@@ -63,6 +66,8 @@ ZMGDRV   CSECT
          BE    TESTR
          CLI   0(R3),C'O'
          BE    TESTO
+         CLI   0(R3),C'F'
+         BE    TESTF
          MVC   LTXT(20),=CL20'ZMGDRV BAD OPERAND'
          BAL   R14,PRT
          B     EXIT
@@ -150,7 +155,6 @@ TESTR    MVC   EP,=CL8'ZMGT441'
          SR    R6,R6
          BAL   R14,CALL
          BAL   R14,REPORT
-         MVC   FENVTOP,TOPEL       THE EXEC STARTED WITH THIS TOP
          BAL   R14,ENVON
          MVC   TID,=CL3'R1'        LOCATE ALL: A, BB, ISPVAR, RC=20
          BAL   R14,LOCALL
@@ -172,7 +176,7 @@ TESTR    MVC   EP,=CL8'ZMGT441'
          BAL   R14,CALL
          BAL   R14,REPORT
          BAL   R14,LOCALL
-         MVC   TID,=CL3'R4'        RETRIEVE: RC=40 FOR NOW
+         MVC   TID,=CL3'R4'        RETRIEVE: THE UPDATED VALUE
          LA    R2,18
          LA    R3,NISPVAR
          LA    R4,6
@@ -188,8 +192,119 @@ TESTR    MVC   EP,=CL8'ZMGT441'
          LA    R6,5
          BAL   R14,CALL
          BAL   R14,REPORT
-         MVC   TID,=CL3'R6'        STALE TOP ELEMENT: CLIST PATH, 40
-         MVC   FENVTOP,=F'1'
+         MVC   TID,=CL3'R7'        A VALUE SURVIVES RC=20, AS ISPF
+         XC    TOKEN,TOKEN         NEEDS: KEEP THE FIRST VALUE ADDRESS
+         LA    R2,3
+         SR    R3,R3
+         SR    R4,R4
+         SR    R5,R5
+         SR    R6,R6
+         BAL   R14,CALL
+         MVC   KEEPP,PVALP
+         MVC   KEEPL,PVALL
+         BAL   R14,LOCDONE         GO ON UNTIL RC=20
+         MVC   PVALP,KEEPP         REPORT THE FIRST VALUE NOW
+         MVC   PVALL,KEEPL
+         XC    PNAMEL,PNAMEL
+         MVC   LASTRC,=F'0'
+         BAL   R14,REPORT
+         MVC   TID,=CL3'R8'        NO-CREATE, UNDEFINED: RC=52
+         LA    R2,18
+         LA    R3,NNOSUCH
+         LA    R4,6
+         SR    R5,R5
+         SR    R6,R6
+         BAL   R14,CALL
+         BAL   R14,REPORT
+         MVC   TID,=CL3'R9'        CREATE WITH THE VALUE OF THE CALLER
+         LA    R2,1
+         LA    R3,NNEWVAR
+         LA    R4,6
+         LA    R5,VMADE
+         LA    R6,4
+         BAL   R14,CALL
+         BAL   R14,REPORT
+         LA    R2,18               AND IT REALLY EXISTS NOW
+         LA    R3,NNEWVAR
+         LA    R4,6
+         SR    R5,R5
+         SR    R6,R6
+         BAL   R14,CALL
+         BAL   R14,REPORT
+         MVC   TID,=CL3'RA'        RETRIEVE/CREATE OF AN EXISTING ONE
+         LA    R2,1                KEEPS ITS VALUE, NOT THE CALLER'S
+         LA    R3,NISPVAR
+         LA    R4,6
+         LA    R5,VMADE
+         LA    R6,4
+         BAL   R14,CALL
+         BAL   R14,REPORT
+         MVC   TID,=CL3'RB'        A VALUE SURVIVES THE NEXT RETRIEVE
+         LA    R2,18
+         LA    R3,NBB
+         LA    R4,2
+         SR    R5,R5
+         SR    R6,R6
+         BAL   R14,CALL
+         MVC   KEEPP,PVALP
+         MVC   KEEPL,PVALL
+         LA    R2,18
+         LA    R3,NISPVAR
+         LA    R4,6
+         SR    R5,R5
+         SR    R6,R6
+         BAL   R14,CALL
+         MVC   PVALP,KEEPP         REPORT THE FIRST VALUE NOW
+         MVC   PVALL,KEEPL
+         XC    PNAMEL,PNAMEL
+         BAL   R14,REPORT
+         MVC   TID,=CL3'RC'        CHUNKS OF ANOTHER TASK, ALREADY
+         GETMAIN R,LV=36864,SP=1   FREED: THEY MUST NOT BE TOUCHED
+         LR    R2,R1
+         FREEMAIN R,LV=36864,A=(R2),SP=1
+         ST    R2,FENVCHK
+         MVC   FENVOWN,=F'1'
+         BAL   R14,LOCALL
+         LA    R1,FENVOWN          THE OWNER IS THIS TASK NOW
+         LA    R2,LTXT+30
+         BAL   R14,HEX
+         MVC   LTXT(26),=CL26'    OWNER OF THE CHUNKS'
+         BAL   R14,PRT
+         L     R1,X'21C'           AND THAT IS PSATOLD
+         ST    R1,DWORK
+         LA    R1,DWORK
+         LA    R2,LTXT+30
+         BAL   R14,HEX
+         MVC   LTXT(26),=CL26'    TCB OF THIS TASK'
+         BAL   R14,PRT
+         MVC   TID,=CL3'RD'        OUR OWN CHUNKS: FREED AND RENEWED
+         BAL   R14,LOCALL
+         MVC   FKMODE,=F'-1'
+         MVC   TID,=CL3'R6'        NO EXEC, NO CLIST: RC=40 ON EACH
+         LA    R2,2                ENTRY CODE
+         LA    R3,NISPVAR
+         LA    R4,6
+         LA    R5,VWORLD
+         LA    R6,5
+         BAL   R14,CALL
+         BAL   R14,REPORT
+         LA    R2,18
+         LA    R3,NISPVAR
+         LA    R4,6
+         SR    R5,R5
+         SR    R6,R6
+         BAL   R14,CALL
+         BAL   R14,REPORT
+         XC    TOKEN,TOKEN
+         LA    R2,3
+         SR    R3,R3
+         SR    R4,R4
+         SR    R5,R5
+         SR    R6,R6
+         BAL   R14,CALL
+         BAL   R14,REPORT
+         MVC   FKMODE,=F'28'
+         MVC   TID,=CL3'RE'        NO VALID ENVIRONMENT: RC=40
          LA    R2,2
          LA    R3,NISPVAR
          LA    R4,6
@@ -197,12 +312,21 @@ TESTR    MVC   EP,=CL8'ZMGT441'
          LA    R6,5
          BAL   R14,CALL
          BAL   R14,REPORT
+         MVC   FKMODE,=F'32'
+         MVC   TID,=CL3'RF'        PARAMETER LIST NOT VALID: RC=40
+         LA    R2,18
+         LA    R3,NISPVAR
+         LA    R4,6
+         SR    R5,R5
+         SR    R6,R6
+         BAL   R14,CALL
+         BAL   R14,REPORT
+         XC    FKMODE,FKMODE
          BAL   R14,ENVOFF
          BAL   R14,FAKESUM
          B     EXIT
          TITLE 'WHICH PATH WINS INSIDE A CLIST'
 TESTO    MVC   EP,=CL8'ZMGT441'
-         MVC   FENVTOP,TOPEL       REXX STARTED ON TOP OF THE CLIST
          BAL   R14,ENVON
          MVC   TID,=CL3'O1'        EXPECT A FROM THE STAND-IN
          XC    TOKEN,TOKEN
@@ -214,7 +338,7 @@ TESTO    MVC   EP,=CL8'ZMGT441'
          BAL   R14,CALL
          BAL   R14,REPORT
          BAL   R14,LOCDONE         FINISH THE SEQUENCE
-         MVC   FENVTOP,=F'1'       A CLIST CAME ON TOP OF THE EXEC
+         MVC   FKMODE,=F'-1'       A CLIST CAME ON TOP OF THE EXEC
          MVC   TID,=CL3'O2'        EXPECT TESTV FROM THE CLIST
          LA    R2,18
          LA    R3,NTESTV
@@ -223,8 +347,44 @@ TESTO    MVC   EP,=CL8'ZMGT441'
          SR    R6,R6
          BAL   R14,CALL
          BAL   R14,REPORT
+         MVC   TID,=CL3'O3'        AN UPDATE GOES TO THE CLIST TOO
+         LA    R2,2
+         LA    R3,NTESTV
+         LA    R4,5
+         LA    R5,VCHG
+         LA    R6,7
+         BAL   R14,CALL
+         BAL   R14,REPORT
+         LA    R2,18
+         LA    R3,NTESTV
+         LA    R4,5
+         SR    R5,R5
+         SR    R6,R6
+         BAL   R14,CALL
+         BAL   R14,REPORT
+         MVC   TID,=CL3'O4'        A WHOLE LOCATE SEQUENCE: THE TOKEN
+         BAL   R14,LOCALL          OF THE CLIST PATH COMES BACK
          BAL   R14,ENVOFF
          BAL   R14,FAKESUM
+         B     EXIT
+         TITLE 'READING A FREED CHUNK'
+TESTF    MVC   LTXT(30),=CL30'F1 GETMAIN, FREEMAIN, READ'
+         BAL   R14,PRT
+         GETMAIN R,LV=36864,SP=1
+         LR    R2,R1
+         ST    R2,DWORK
+         LA    R1,DWORK
+         LA    R2,LTXT+30
+         BAL   R14,HEX
+         MVC   LTXT(26),=CL26'F2 CHUNK AT'
+         BAL   R14,PRT
+         L     R2,DWORK
+         MVC   0(4,R2),=F'1'       TOUCH THE PAGE
+         FREEMAIN R,LV=36864,A=(R2),SP=1
+         L     R2,DWORK
+         L     R3,0(,R2)           AN ABEND HERE IS THE ANSWER
+         MVC   LTXT(30),=CL30'F3 READ WORKED, NO ABEND'
+         BAL   R14,PRT
          B     EXIT
          TITLE 'SUBROUTINES'
 *
@@ -381,8 +541,9 @@ EXIT     L     R13,4(,R13)
 *
 *  FAKEXCOM - IRXEXCOM CONTRACT OVER A SMALL TABLE.  CHECKS THE
 *  CALL: PARAMETER 1 IS C'IRXEXCOM', R0 IS THE ENVBLOCK, THE 4TH
-*  ENTRY ENDS THE LIST.  SUPPORTS 'S' AND 'N'; ANY REQUEST OTHER
-*  THAN 'N' RESTARTS THE 'N' SEQUENCE.
+*  ENTRY ENDS THE LIST.  SUPPORTS 'S', 'F' AND 'N'; ANY REQUEST OTHER
+*  THAN 'N' RESTARTS THE 'N' SEQUENCE.  WITH FKMODE NOT ZERO IT DOES
+*  NOTHING AND RETURNS FKMODE AS ITS RETURN CODE.
 *
 FAKEXCOM STM   R14,R12,12(R13)
          BALR  R9,0
@@ -407,7 +568,9 @@ FKBASEX  DS    0H
 FKBADC   L     R2,FKBAD
          LA    R2,1(,R2)
          ST    R2,FKBAD
-FKOK     L     R3,12(,R1)          R3 -> SHVBLOCK
+FKOK     ICM   R2,15,FKMODE        ANSWER WITHOUT DOING ANYTHING?
+         BNZ   FKRET               YES
+         L     R3,12(,R1)          R3 -> SHVBLOCK
          LA    R3,0(,R3)
          MVI   9(R3),0             SHVRET
          CLI   8(R3),C'N'
@@ -415,7 +578,36 @@ FKOK     L     R3,12(,R1)          R3 -> SHVBLOCK
          XC    FKITER,FKITER       ANYTHING ELSE RESTARTS 'N'
          CLI   8(R3),C'S'
          BE    FKSTORE
+         CLI   8(R3),C'F'
+         BE    FKFETCH
          MVI   9(R3),X'80'         SHVBADF
+         B     FKRET
+FKFETCH  L     R4,X'14'(,R3)       SHVNAML
+         L     R5,X'10'(,R3)       SHVNAMA
+         LA    R6,FKTAB
+         L     R7,FKCOUNT
+         LTR   R7,R7
+         BZ    FKFNONE
+FKFLOOP  CH    R4,0(,R6)
+         BNE   FKFSKIP
+         BCTR  R4,0
+         EX    R4,FKCLC
+         LA    R4,1(,R4)
+         BE    FKFHIT
+FKFSKIP  LA    R6,FKSLOT(,R6)
+         BCT   R7,FKFLOOP
+FKFNONE  MVI   9(R3),X'01'         SHVNEWV
+         XC    X'1C'(4,R3),X'1C'(R3)
+         B     FKRET
+FKFHIT   LH    R4,10(,R6)          VALUE LENGTH
+         C     R4,X'0C'(,R3)       FITS SHVBUFL?
+         BH    FKTRUNC
+         ST    R4,X'1C'(,R3)       SHVVALL
+         LTR   R4,R4
+         BZ    FKRET
+         L     R5,X'18'(,R3)
+         BCTR  R4,0
+         EX    R4,FKGETV
          B     FKRET
 FKSTORE  L     R4,X'14'(,R3)       SHVNAML
          LTR   R4,R4
@@ -488,8 +680,8 @@ FKNGO    LA    R6,FKSLOT
          EX    R4,FKGETV
          B     FKRET
 FKTRUNC  MVI   9(R3),X'04'         SHVTRUNC
-FKRET    LM    R14,R12,12(R13)
-         SR    R15,R15
+FKRET    MVC   16(4,R13),FKMODE    THE RETURN CODE
+         LM    R14,R12,12(R13)
          BR    R14
 FKCLC    CLC   2(0,R6),0(R5)
 FKMVN    MVC   2(0,R6),0(R5)
@@ -503,6 +695,8 @@ ECTA     DS    A
 TOPEL    DS    A
 OLDENV   DS    A
 LASTRC   DS    F
+KEEPP    DS    A
+KEEPL    DS    F
 EP       DS    CL8
 TID      DS    CL3
 LOCQUIET DS    X
@@ -528,6 +722,7 @@ NTESTV   DC    C'TESTV'
 NNOSUCH  DC    C'NOSUCH'
 NISPVAR  DC    C'ISPVAR'
 NNEWV    DC    C'NEWV'
+NBB      DC    C'BB'
 VHELLO   DC    C'HELLOWORLD'
 VCHG     DC    C'CHANGED'
 VWORLD   DC    C'WORLD'
@@ -541,11 +736,14 @@ VLONG    DC    C'ABCDEFGHIJKLMNOPQRST'
 FENV     DC    CL8'ENVBLOCK',CL4'0100',F'320'
          DC    A(0,0,0,FEXTE)      PARMBLOCK, USER, WORKBLOK, IRXEXTE
          DC    68F'0'              UP TO +X'130'
-FENVTOP  DC    F'0'                +X'130'
-         DC    XL12'00'
+         DC    F'0'                +X'130', NOT READ BY THE MODULE
+FENVCHK  DC    F'0'                +X'134', CHUNKS OF THE MODULE
+FENVOWN  DC    F'0'                +X'138', THEIR OWNER
+         DC    F'0'                +X'13C', NOT READ BY THE MODULE
 FEXTE    DC    F'4',A(0,0,0,FAKEXCOM)  IRXEXCOM AT +X'10'
 FKCALLS  DC    F'0'
 FKBAD    DC    F'0'
+FKMODE   DC    F'0'                RETURN CODE TO ANSWER WITH
 FKITER   DC    F'0'
 FKCOUNT  DC    F'3'
 FKSLOT   EQU   28                  H NAMELEN, CL8 NAME, H VALLEN, CL16

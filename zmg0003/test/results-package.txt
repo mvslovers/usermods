@@ -1,0 +1,110 @@
+SMP package of ZMG0003 measured, 2026-11-05. Throwaway TK5 and MVS/CE, BREXX/370 feature/irxexcom 9dbcf46.
+
+TK5: ZMG03CK, ZMG03BK, $INSTALL, ZMG03AP: RECEIVE and APPLY RC 0, HMA2390 for IKJPTGT in LPALIB. IPL with CLPA.
+ISPF with the module from the LPA: the private IKJCT441 deleted (HERC01.ZMG3.LOAD holds only ZMGWHO, ZMG_LPA=1):
+  A FLD=NEW1, C both orders ECTENVBK 0, D and E FLD=NEW3, REXX in REXX, 20 dialogs (largest block equal before and
+  after), PA1 at READY and in a loop under ISPF: as in results-after.txt.
+MVS/CE: the same jobs up to APPLY, RC 0, HMA2390. No ISPF run with real execs there.
+
+Status of the requisites, LIST CDS, both images: ZP60014 and ZP60038 REC APP, not accepted. TK5: UY16532 REC APP ACC.
+
+Removal, without accepting: ZMG03RS step SMP RC 12: HMA3022, HMA3590 ZP60038 PRE. Step COPY RC 0, IPL. The control:
+the dialog of case A, now with the IKJCT441 of ZP60038 and BREXX/370 3.1.0 stage 1:
+--- s1-start
+ X1 START
+ WHO T=00995B38 P=00995DD8 G=0099B6E8 L=000A7CF4 C=000A7CF4 E=0023F0A0 I=000A9F9
+8 S=000A9FA8 N=00000000 F=00000080
+ WH2 U=00000000 R=002193F0 W=000A9FA8 00000000 00000000 00000000 M=00611000
+ X1 VPUT RC=8
+ BRX0003E - ABEND CAUGHT IN BREXX/370
+ USER HERC01    ISPEXEC   ABEND S0C1
+ EPA 000D0000  PSW 078D2000 00146578  ILC 02  INTC 0001
+ GR 0-3   00000008  0029308C  0017BDA4  00000008
+ GR 4-7   0014C198  000B8100  00148640  001484C0
+ GR 8-11  00148700  000B8000  00293000  00146528
+ GR 12-15 00146000  00293128  40146564  00000028
+ ***
+
+So the module in the LPA was what served the dialogs above, and the removal took effect. It also means:
+A REXX dialog without ZMG0003 abends at the first ISPEXEC (caught as BRX0003E). This is not new in 3.1.0 and not
+caused by ECTENVBK: BREXX/370 2.5.3 and 3.0.0 end the same way, at the same offset in ISPF, measured separately on TK5
+and, for 3.0.0 and 3.1.0, on MVS/CE. ISPF abends after RC 40 from the old IKJCT441.
+ZMG0003 stays in the inventory in this case (LIST CDS: REC APP, NOGO PRE ZP60038).
+
+Removal, after accepting, TK5, no IPL and no dialog run afterwards:
+ACCEPT SELECT(ZP60014,ZP60038) RC 12 without the operand: HMA3652 CANNOT BE ACCEPTED UNLESS USERMODS IS SPECIFIED.
+ACCEPT SELECT(ZP60014,ZP60038) USERMODS with SMPACC: RC 4 (link RC 04 into AOST4), HMA2270 for both.
+RESTORE SELECT(ZMG0003) then: RC 0, HMA2390 for IKJPTGT, HMA2270, LIST shows RESTORED.
+
+Module comparison, 2026-11-05. Fresh throwaway TK5 and MVS/CE, the library of this commit's parent.
+Order: ZMG03CK, ZMG03BK, $INSTALL, then a job that assembles IKJCT441 with IFOX00, links IKJPTGT the way
+test/mktest.py does (ZMGT441, IKJCT441 first) and lists it and SYS1.LPALIB(IKJPTGT) with AMBLIST, then ZMG03AP,
+then AMBLIST of SYS1.LPALIB(IKJPTGT) again. Jobs: TK5 JOB00047 and JOB00049, MVS/CE JOB00038 and JOB00040.
+
+The whole-module byte comparison says nothing here: 48814 of 50408 bytes differ at the same offset on TK5, since the
+test link moves IKJCT441 to the front. test/lmodcmp.py compares per CSECT:
+
+                                      TK5           MVS/CE
+text bytes, tested / SMP-built        50408/50408   50136/50136
+CSECTs                                14/14         14/14
+relocations                           224/224       224/224
+text outside relocated fields         identical     identical
+relocations (target CSECT + offset)   identical     identical
+CSECTs changed by APPLY               IKJCT441      IKJCT441
+IKJCT441 before / after APPLY, bytes  1352/2728     1352/2728
+ZMG0003 in the IDR of IKJPTGT         yes           yes
+
+Controls: a flipped text byte and a changed address constant are both reported. With the module from before APPLY in
+place of the SMP-built one: NOT PROVEN, exit 1. IKJCT441 itself has the same text on TK5 and MVS/CE; the other CSECTs
+are not the same level on the two (IKJEFT45 1632 and 1444 bytes).
+
+Object decks: IFOX00 on TK5 and on MVS/CE give the same 52 cards (ESD, 49 TXT, RLD, END). as370 gives the same in
+columns 1-72 except the END card: ASM370 0100 against 15741SC103 0201.
+
+Requisites accepted before the install, 2026-11-05. Fresh throwaway TK5 and MVS/CE: ZMG03CK, ZMG03BK, ACCEPT, $INSTALL,
+ZMG03AP, ZMG03RS, IPL, $INSTALL, ZMG03AP, with AMBLIST of SYS1.LPALIB(IKJPTGT) after each stage. That IPL was a
+CLPA IPL on TK5 only (IEASYS00 has CLPA). MVS/CE has none and answers IEA101A empty, so there it kept the old PLPA:
+see "Repeated with a real CLPA" below.
+
+TK5, SMPACC, SELECT(ZP60014,ZP60038) USERMODS: RC 4, HMA2270 for both.
+MVS/CE, SMPAPP, there is no SMPACC. SELECT(ZP60014,ZP60038) USERMODS: RC 12, HMA3022, UY16532, UY17021, UY01301 PRE.
+Followed the HMA3590 names until none was left; the whole list, in one job on a fresh system:
+SELECT(UY01186,UY01301,UY13091,UY16532,UY17021,UZ44177,UZ47575,UZ47871,UZ48384,UZ48765,UZ82014,ZP60014,ZP60038) USERMODS:
+RC 4, HMA2270 for all 13.
+
+                                      TK5           MVS/CE
+ACCEPT changes IKJPTGT                no            no
+ZMG03RS step SMP, RESTORE             RC 0          RC 0
+ZMG03RS step COPY                     RC 0          RC 0
+LIST after RESTORE, ZP60014/ZP60038   REC APP ACC   REC APP ACC
+IKJPTGT after removal vs before       equal         equal
+IKJCT441 bytes: before/installed/after removal/installed again
+                                      1352/2728/1352/2728   the same
+second install vs first               equal         equal
+
+TSO answered after the IPL on both. No ISPF dialog on this path. Equal means per CSECT as in test/lmodcmp.py.
+Without the accept, for comparison, MVS/CE: RESTORE RC 12, HMA3022, ZP60038 PRE, as on TK5.
+
+Repeated with a real CLPA, 2026-11-05. The same order with fresh TK5 and MVS/CE, requisites accepted, SMP RESTORE
+alone (no step COPY, which would hide the result). MVS/CE: IEA101A answered with r 00,clpa, console shows R 00,CLPA.
+
+                                      TK5           MVS/CE
+RESTORE                               RC 0          RC 0
+IKJPTGT after RESTORE vs before       equal         equal
+TSO after the IPL                     logged on     logged on
+second install vs first               equal         equal
+
+A form with SUP(ZP60038) instead of PRE(ZP60038), not the form of this package, 2026-11-05. MCS with
+PRE(UY01301,ZP60014) SUP(ZP60038) and the ++JCLIN and ++MACUPD(SGIKJ441) of ZP60038. The jobs need a DD for AGENLIB:
+without it APPLY on TK5 with ZP60038 accepted ends with RC 12, HMA2832, and leaves ZMG0003 as REC APP ERR.
+
+Accepted before the install           RESTORE ZMG0003                     IKJPTGT after it
+requisites and ZP60038, TK5, MVS/CE   RC 0                                equal to before
+requisites only, TK5, MVS/CE          RC 12, HMA3022, ZP60038 SUPED       unchanged, ZMG0003 installed
+nothing, TK5, MVS/CE                  RC 12, HMA3022, ZP60038 SUPED, PRE  unchanged, ZMG0003 installed
+ZP60038 restored before the install   RC 0, no LINK message               unchanged, ZMG0003 installed
+
+Installed module, SUP form vs this package: equal on both. Second install vs first: equal in all cases. TSO logged
+on after each CLPA IPL. The last row: RESTORE of ZP60038 and of ZMG0003 both end with RC 0 and leave the module in
+place, since the distribution library has no IKJCT441 to link from; SMP then lists neither sysmod. A system that never
+had ZP60038 was not available to test.
