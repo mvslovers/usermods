@@ -22,6 +22,8 @@ the first call. Reported to the author of ISPF.
 | `IKJCT441.ASM` | The module. Greg Price's public-domain source from `ZP60038` (rework 2019-07-27) with the REXX path added; his header, author line and change log are kept |
 | `test/ZMGDRV.ASM` | Test driver, a TSO command processor: `C` CLIST regression, `R` REXX path, `O` which path wins inside a CLIST, `F` reading a freed chunk. It carries the stand-in REXX environment (`ENVBLOCK`, `IRXEXTE`, and `FAKEXCOM`, a variable routine over a small table that also checks how it is called) |
 | `test/mktest.py` | Writes the test job: assembles both sources with IFOX00 on the target, links a private copy of the installed `IKJPTGT` with the new `IKJCT441` as `ZMGT441`, runs the driver in three batch TMP steps |
+| `test/lmodcmp.py` | Compares the tested `IKJPTGT` with the SMP-built one from AMBLIST listings, per CSECT, with controls |
+| `test/results-package.txt` | The SMP package measured: install, ISPF from the LPA, removal, module comparison |
 | `test/results-tk5.txt` | The driver's output from TK5 |
 | `test/ispf/results-after.txt` | Real BREXX/370 execs under ISPF: two screens, nesting, attention, storage |
 

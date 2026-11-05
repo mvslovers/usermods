@@ -35,3 +35,28 @@ Removal, after accepting, TK5, no IPL and no dialog run afterwards:
 ACCEPT SELECT(ZP60014,ZP60038) RC 12 without the operand: HMA3652 CANNOT BE ACCEPTED UNLESS USERMODS IS SPECIFIED.
 ACCEPT SELECT(ZP60014,ZP60038) USERMODS with SMPACC: RC 4 (link RC 04 into AOST4), HMA2270 for both.
 RESTORE SELECT(ZMG0003) then: RC 0, HMA2390 for IKJPTGT, HMA2270, LIST shows RESTORED.
+
+Module comparison, 2026-11-05. Fresh throwaway TK5 and MVS/CE, the library of this commit's parent.
+Order: ZMG03CK, ZMG03BK, $INSTALL, then a job that assembles IKJCT441 with IFOX00, links IKJPTGT the way
+test/mktest.py does (ZMGT441, IKJCT441 first) and lists it and SYS1.LPALIB(IKJPTGT) with AMBLIST, then ZMG03AP,
+then AMBLIST of SYS1.LPALIB(IKJPTGT) again. Jobs: TK5 JOB00047 and JOB00049, MVS/CE JOB00038 and JOB00040.
+
+The whole-module byte comparison says nothing here: 48814 of 50408 bytes differ at the same offset on TK5, since the
+test link moves IKJCT441 to the front. test/lmodcmp.py compares per CSECT:
+
+                                      TK5           MVS/CE
+text bytes, tested / SMP-built        50408/50408   50136/50136
+CSECTs                                14/14         14/14
+relocations                           224/224       224/224
+text outside relocated fields         identical     identical
+relocations (target CSECT + offset)   identical     identical
+CSECTs changed by APPLY               IKJCT441      IKJCT441
+IKJCT441 before / after APPLY, bytes  1352/2728     1352/2728
+ZMG0003 in the IDR of IKJPTGT         yes           yes
+
+Controls: a flipped text byte and a changed address constant are both reported. With the module from before APPLY in
+place of the SMP-built one: NOT PROVEN, exit 1. IKJCT441 itself has the same text on TK5 and MVS/CE; the other CSECTs
+are not the same level on the two (IKJEFT45 1632 and 1444 bytes).
+
+Object decks: IFOX00 on TK5 and on MVS/CE give the same 52 cards (ESD, 49 TXT, RLD, END). as370 gives the same in
+columns 1-72 except the END card: ASM370 0100 against 15741SC103 0201.
