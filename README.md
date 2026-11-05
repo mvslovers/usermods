@@ -38,7 +38,9 @@ side-by-side usermod come after all, it gets a new id. `ZMG0004` is spent.
   the target system against its own `SYS1.MACLIB` and `SYS1.AMODGEN`, as one
   library `USERMOD.<name>`: the cover letter with the MCS, the sources, and the
   jobs to check, back up, install, verify and remove it.
-- **Usermods are never accepted.** They stay removable with `RESTORE`.
+- **Usermods are never accepted, their requisites are.** A usermod stays removable with
+  `RESTORE`, and `RESTORE` refuses it while a sysmod it requires is only applied. So its
+  cover letter says what to accept before the install.
 - **The `IRX*` namespace belongs to REKX/370.** No usermod here ships a
   module, alias or entry point named `IRX*`, and none loads or links one by
   name. `ZMG0003` reaches the REXX variable interface only through the

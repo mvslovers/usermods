@@ -40,20 +40,30 @@ with RC 12 on a first install; that is expected. The usermod is active after the
 with CLPA. A return code does not prove the module: `test/lmodcmp.py` compares it with the
 tested one (`test/results-package.txt`).
 
-`ZMG03RS` removes the usermod, active after the next IPL with CLPA. Both ways were measured
-on TK5:
+**Accept the requisites first, so that `RESTORE` can take the usermod out again.** `ZMG0003`
+itself is never accepted, but `RESTORE` refuses it (RC 12, HMA3022, `ZP60038 PRE`) while
+`ZP60038` is only applied. Back up `SYS1.AOST4` and `SYS1.AGENLIB`, then run this before
+`$INSTALL`. It ends with RC 4 from the links into `AOST4`; `USERMODS` is required, without it
+HMA3652.
 
-- **`ZP60038` not accepted, the state of TK5 and MVS/CE.** `RESTORE` ends with RC 12
-  (HMA3022, `ZP60038` is a missing requisite). Step `COPY` still brings back `IKJPTGT` from
-  the backup of `ZMG03BK`, which is what the system then runs. `ZMG0003` stays in the SMP
-  inventory.
-- **`ZP60014` and `ZP60038` accepted first**, with `ACCEPT SELECT(ZP60014,ZP60038) USERMODS`
-  under the `SMPACC` procedure (RC 4; without `USERMODS` RC 12, HMA3652). `RESTORE` then ends
-  with RC 0 and the inventory says `RESTORED`. This updates the distribution library
-  `SYS1.AOST4` and cannot be taken back with `RESTORE`, so back it up first; whether to do it
-  is the decision of whoever runs the system. No IPL and no dialog ran after this way.
-  TK5 does not accept usermods: what is accepted is in the distribution libraries, and a
-  later SYSGEN would build from them. So on TK5 the first way is the one that applies.
+| System | Procedure | `ACCEPT` |
+|---|---|---|
+| MVS/CE | `SMPAPP` (there is no `SMPACC`) | `SELECT(UY01186,UY01301,UY13091,UY16532,UY17021,UZ44177,UZ47575,UZ47871,UZ48384,UZ48765,UZ82014,ZP60014,ZP60038) USERMODS` |
+| TK5 | `SMPACC` | `SELECT(ZP60014,ZP60038) USERMODS` |
+
+The MVS/CE list is the whole requisite chain of `ZP60038` not yet accepted there; TK5 has
+the rest accepted already. On both, measured from a fresh system: `ACCEPT` leaves `IKJPTGT`
+unchanged, `$INSTALL` and `ZMG03AP` run as usual, and `ZMG03RS` ends with `RESTORE` RC 0 and
+`IKJPTGT` as it was before the install. TSO came up after the IPL with CLPA, and a second
+install gave the same module. No ISPF dialog ran on this path.
+
+`ZMG03RS` removes the usermod, active after the next IPL with CLPA.
+
+**Without the accept** `RESTORE` ends with RC 12 and `ZMG0003` stays in the SMP inventory.
+Step `COPY` still brings back `IKJPTGT` from the backup of `ZMG03BK`, and the system runs
+without the usermod (measured on TK5: after the IPL a dialog ends as without `ZMG0003`). TK5
+as distributed takes this way: it accepts no usermods, because a later SYSGEN would build
+from the distribution libraries.
 
 ## The REXX path
 

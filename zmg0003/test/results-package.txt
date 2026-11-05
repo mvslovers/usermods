@@ -60,3 +60,25 @@ are not the same level on the two (IKJEFT45 1632 and 1444 bytes).
 
 Object decks: IFOX00 on TK5 and on MVS/CE give the same 52 cards (ESD, 49 TXT, RLD, END). as370 gives the same in
 columns 1-72 except the END card: ASM370 0100 against 15741SC103 0201.
+
+Requisites accepted before the install, 2026-11-05. Fresh throwaway TK5 and MVS/CE: ZMG03CK, ZMG03BK, ACCEPT, $INSTALL,
+ZMG03AP, ZMG03RS, IPL with CLPA, $INSTALL, ZMG03AP, with AMBLIST of SYS1.LPALIB(IKJPTGT) after each stage.
+
+TK5, SMPACC, SELECT(ZP60014,ZP60038) USERMODS: RC 4, HMA2270 for both.
+MVS/CE, SMPAPP, there is no SMPACC. SELECT(ZP60014,ZP60038) USERMODS: RC 12, HMA3022, UY16532, UY17021, UY01301 PRE.
+Followed the HMA3590 names until none was left; the whole list, in one job on a fresh system:
+SELECT(UY01186,UY01301,UY13091,UY16532,UY17021,UZ44177,UZ47575,UZ47871,UZ48384,UZ48765,UZ82014,ZP60014,ZP60038) USERMODS:
+RC 4, HMA2270 for all 13.
+
+                                      TK5           MVS/CE
+ACCEPT changes IKJPTGT                no            no
+ZMG03RS step SMP, RESTORE             RC 0          RC 0
+ZMG03RS step COPY                     RC 0          RC 0
+LIST after RESTORE, ZP60014/ZP60038   REC APP ACC   REC APP ACC
+IKJPTGT after removal vs before       equal         equal
+IKJCT441 bytes: before/installed/after removal/installed again
+                                      1352/2728/1352/2728   the same
+second install vs first               equal         equal
+
+TSO answered after the IPL on both. No ISPF dialog on this path. Equal means per CSECT as in test/lmodcmp.py.
+Without the accept, for comparison, MVS/CE: RESTORE RC 12, HMA3022, ZP60038 PRE, as on TK5.
