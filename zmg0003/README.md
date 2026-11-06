@@ -4,7 +4,10 @@
 of a running REXX exec as well as CLIST variables, so ISPF dialog variables
 work from REXX. Design: [`internals/ZMG0003.md`](../internals/ZMG0003.md).
 
-Status: released with BREXX/370 3.1.0. The library (`usermod.py`, `usermod/`, `jcl/`) is measured through SMP, and the
+Status: **superseded by the rework of `ZP60038` of 2026-11-06**, which carries this module
+(see "ZMG0003 or the rework of ZP60038" below). `ZMG0003` was released with BREXX/370 3.1.0
+and stays usable on a system with the older `ZP60038`; the id stays spent, and this repository
+is being archived. The library (`usermod.py`, `usermod/`, `jcl/`) is measured through SMP, and the
 SMP-built module equals the tested one (`test/results-package.txt`). There is an open defect under ISPF:
 
 **Open defect, in ISPF and not in this module.** A variable that first appears
@@ -33,21 +36,47 @@ then `OLD` it gets its value back, the same in a CLIST and in REXX (`test/ispf/r
 
 ## ZMG0003 or the rework of ZP60038
 
-Rob Prins reworked `ZP60038` on 2026-11-06 (`++USERMOD(ZP60038) REWORK(20261106)`). It
-carries this module, so **a system with that rework does not need `ZMG0003`; use `ZMG0003`
-only where the older `ZP60038` is applied.** `ZMG03CK` cannot tell the two apart: both show as
-`ZP60038` applied. `AMBLIST` of `IKJPTGT` can, the rework has `IKJCT441 ZP60038 20261103`
-in the module text where this usermod has `IKJCT441 ZMG0003 20261103`.
+Rob Prins reworked `ZP60038` on 2026-11-06 (`++USERMOD(ZP60038) REWORK(20261106)`). The
+rework is his package [zp60038.zip](https://prince-webdesign.nl/images/downloads/zp60038.zip)
+(sha256 `d0120eaf75f992a17629b6c7bcb428b8ad5376672df8a4e225cea01bd655b626`): the usermod
+library with its cover letter, the source of `IKJCT441` and an install job. TK5 Update 6 comes
+with the rework. Its `IKJCT441` is this module: the source differs from `IKJCT441.ASM` in five
+lines of comment and in the module text (`IKJCT441 ZP60038 20261103` instead of
+`IKJCT441 ZMG0003 20261103`). So **`ZMG0003` is superseded: a new install takes the rework,
+and a system with the rework does not need `ZMG0003`.** `ZMG0003` stays usable where the older
+`ZP60038` is applied, and its id stays spent. `ZMG03CK` cannot tell the two apart: both show as
+`ZP60038` applied, and so does `LIST CDS`. `AMBLIST` of `IKJPTGT` can, by the module text above.
 
-Measured on fresh TK5 and MVS/CE with the older `ZP60038` applied:
+Measured on fresh TK5 and MVS/CE, each in a throwaway system. Each item names its starting
+state; unless it says otherwise, that is the system as distributed, with the older `ZP60038`
+applied and not accepted:
 
-- The install job of the rework replaces it without a `RESTORE`. `APPLY` ends with RC 0; the
-  job ends with RC 4, from its `REJECT` (`HMA4081`).
-- `IKJPTGT` differs from the one with `ZMG0003` in that one line of module text only.
-- TSO comes up after an IPL with CLPA.
+- **The rework over the older `ZP60038`:** its install job replaces it without a `RESTORE`.
+  `APPLY` ends with RC 0; the job ends with RC 4, from its `REJECT` (`HMA4081`). `IKJCT441`
+  is the only CSECT of `IKJPTGT` that changes, and it differs from the one of `ZMG0003` in that
+  one line of module text only (`test/lmodcmp.py`).
+- **`ZMG0003` after the rework:** `ZMG03AP` ends with RC 0 and `IKJPTGT` carries this
+  usermod's module. `RESTORE` of `ZMG0003` without an accept of the requisites then ends with
+  RC 12 (`HMA3022`, `ZP60038 PRE`). Taking `ZMG0003` out again after the rework is not measured.
+- **The rework after `ZMG0003`:** `APPLY` ends with RC 12 (`HMA3190`: `ZP60038` neither
+  pre-requires nor supersedes the `RMID` `ZMG0003`), and `IKJPTGT` keeps the module of
+  `ZMG0003`.
+- **`RESTORE` of the rework:** with the requisites only applied, RC 12 (`HMA3022`) and nothing
+  changes. With the requisites accepted, RC 0; `ZP60038` is then out of the SMP inventory and
+  `IKJPTGT` keeps the reworked module.
+- **The accept list of "Install and removal" below, around the rework:** the list contains
+  `ZP60038`. `ACCEPT` after the rework ends with RC 8 (`HMA2832`: the rework's install job
+  deletes the `IKJCT441` member of its library), and a `RESTORE` of the rework after that
+  ends with RC 12 (`HMA3822`, `HMA4300`). `ACCEPT` before the rework makes the rework's
+  install job end with RC 12 (its `REJECT`, `HMA2462`; the `APPLY` itself is in order),
+  and `RESTORE` then ends with RC 12 (`HMA2452`, already accepted); the module is the reworked
+  one in both orders. The accept route below was measured with the older `ZP60038` only.
+- **On TK5 without any `ZP60038`** (`ZP60014` and `ZP60038` taken out with the `UCLIN` way
+  below, `ZP60014` applied again): the install job of the rework ends with RC 0, and the module
+  is the one above.
 
-Not measured: an ISPF dialog with the rework, `RESTORE` of the rework, its install on a system
-without any `ZP60038`, and `ZMG0003` on top of the rework.
+Not measured: an IPL with the reworked module in the LPA, an ISPF dialog with the rework,
+and its install on MVS/CE without any `ZP60038`.
 
 ## Install and removal
 
@@ -61,7 +90,9 @@ tested one (`test/results-package.txt`).
 
 **Accept the requisites first, so that `RESTORE` can take the usermod out again.** `ZMG0003`
 itself is never accepted, but `RESTORE` refuses it (RC 12, HMA3022, `ZP60038 PRE`) while
-`ZP60038` is only applied. Back up `SYS1.AOST4` and `SYS1.AGENLIB`, then run this before
+`ZP60038` is only applied. This route is measured with the older `ZP60038`; with the rework
+of `ZP60038` the accept ends in error (see "ZMG0003 or the rework of ZP60038" above). Back up
+`SYS1.AOST4` and `SYS1.AGENLIB`, then run this before
 `$INSTALL`. It ends with RC 4 from the links into `AOST4`; `USERMODS` is required, without it
 HMA3652.
 
