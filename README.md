@@ -29,11 +29,14 @@ either of them.
 
 **`ZMG0003` is superseded by the rework of `ZP60038` of 2026-11-06**
 (`++USERMOD(ZP60038) REWORK(20261106)`). Rob Prins took the module of `ZMG0003`
-into `ZP60038` itself, so a system with that rework does not need `ZMG0003`,
-and a new install takes the rework. A system that already has `ZMG0003` keeps
-it, or removes it before the rework: the rework's `APPLY` ends with RC 12
-(`HMA3190`) while `ZMG0003` is applied. The id `ZMG0003` is spent and is not
-reused. What was measured, and how to tell the two apart, is in
+into `ZP60038` itself. The rework is his package
+[zp60038.zip](https://prince-webdesign.nl/images/downloads/zp60038.zip)
+(sha256 `d0120eaf75f992a17629b6c7bcb428b8ad5376672df8a4e225cea01bd655b626`),
+with its own install job and cover letter; TK5 Update 6 comes with it. A
+system with the rework does not need `ZMG0003`, and a new install takes the
+rework. Measured: the rework's `APPLY` ends with RC 12 (`HMA3190`) while
+`ZMG0003` is applied. The id `ZMG0003` is spent and is not reused. What was
+measured, and how to tell the two apart, is in
 [`zmg0003/README.md`](zmg0003/README.md).
 
 **`ZMG0003` was reserved until 2026-11-05 for a usermod running both REXX side
