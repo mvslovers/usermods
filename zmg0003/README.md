@@ -4,9 +4,8 @@
 of a running REXX exec as well as CLIST variables, so ISPF dialog variables
 work from REXX. Design: [`internals/ZMG0003.md`](../internals/ZMG0003.md).
 
-Status: written and tested with BREXX/370 3.1.0 stage 1, **not ready**. The library (`usermod.py`, `usermod/`, `jcl/`) is
-measured through SMP (`test/results-package.txt`); the check that the SMP-built module equals the tested one is still
-missing. There is an open defect under ISPF:
+Status: released with BREXX/370 3.1.0. The library (`usermod.py`, `usermod/`, `jcl/`) is measured through SMP, and the
+SMP-built module equals the tested one (`test/results-package.txt`). There is an open defect under ISPF:
 
 **Open defect, in ISPF and not in this module.** A variable that first appears
 after the first `ISPEXEC` call of a dialog does not get its value back from `VGET`:
@@ -31,6 +30,24 @@ the first call. Reported to the author of ISPF.
 `DISPLAY` between: with `INNER` then `CLOBBER` the variable keeps `CLOBBER`, with `FROMXC`
 then `OLD` it gets its value back, the same in a CLIST and in REXX (`test/ispf/results-after.txt`,
 `XB`, `XU`, `XC`, `XA`). Whether it is the length of the values is not isolated.
+
+## ZMG0003 or the rework of ZP60038
+
+Rob Prins reworked `ZP60038` on 2026-11-06 (`++USERMOD(ZP60038) REWORK(20261106)`). It
+carries this module, so **a system with that rework does not need `ZMG0003`; use `ZMG0003`
+only where the older `ZP60038` is applied.** `ZMG03CK` cannot tell the two apart: both show as
+`ZP60038` applied. `AMBLIST` of `IKJPTGT` can, the rework has `IKJCT441 ZP60038 20261103`
+in the module text where this usermod has `IKJCT441 ZMG0003 20261103`.
+
+Measured on fresh TK5 and MVS/CE with the older `ZP60038` applied:
+
+- The install job of the rework replaces it without a `RESTORE`. `APPLY` ends with RC 0; the
+  job ends with RC 4, from its `REJECT` (`HMA4081`).
+- `IKJPTGT` differs from the one with `ZMG0003` in that one line of module text only.
+- TSO comes up after an IPL with CLPA.
+
+Not measured: an ISPF dialog with the rework, `RESTORE` of the rework, its install on a system
+without any `ZP60038`, and `ZMG0003` on top of the rework.
 
 ## Install and removal
 
@@ -66,6 +83,31 @@ Step `COPY` still brings back `IKJPTGT` from the backup of `ZMG03BK`, and the sy
 without the usermod (measured on TK5: after the IPL a dialog ends as without `ZMG0003`). TK5
 as distributed takes this way: it accepts no usermods, because a later SYSGEN would build
 from the distribution libraries.
+
+**Without an accept on TK5**, the usermod and its requisites can also come out and the requisites
+go back, if the `REJECT` indicator in the SMPPTS system entry is switched off first:
+
+```
+ UCLIN PTS .
+ DEL SYS REJECT .
+ ENDUCL .
+ RESTORE SELECT(ZMG0003,ZP60014,ZP60038) .
+ APPLY SELECT(ZP60014,ZP60038) DIS(WRITE) .
+ UCLIN PTS .
+ ADD SYS REJECT .
+ ENDUCL .
+```
+
+Measured on a fresh TK5 with these as separate jobs, twice in a row: `RESTORE` RC 4, `APPLY` RC 0,
+`IKJPTGT` line-identical to the state before the install, TSO up after the IPL, and a second install
+gave the same module. `RESTORE` and `APPLY` need the DD statements for `LPALIB`, `AOST4` and
+`AGENLIB`. `EXEC` in `SYS1.CMDLIB`, which `ZP60014` also changes, came back line-identical in a run of
+`RESTORE` and `APPLY` without `ZMG0003`.
+
+**Switch it off before the `RESTORE`.** With `REJECT=YES`, as distributed, `RESTORE` deletes the
+three from the SMPPTS, the `APPLY` ends with RC 12 (`HMA4012`), and `ZP60014` and `ZP60038` stay
+off the system until they are received again. On MVS/CE this way is not available without the
+accept: `RESTORE` stops at the requisites that are only applied, such as `UY16532` and `UY17021`.
 
 ## The REXX path
 
