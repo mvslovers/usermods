@@ -57,7 +57,7 @@ The MVS/CE list is the whole requisite chain of `ZP60038` not yet accepted there
 the rest accepted already. On both, measured from a fresh system: `ACCEPT` leaves `IKJPTGT`
 unchanged, `$INSTALL` and `ZMG03AP` run as usual, and `ZMG03RS` ends with `RESTORE` RC 0 and
 `IKJPTGT` as it was before the install, also with `RESTORE` alone, without step `COPY`. TSO
-came up after an IPL with CLPA (console checked), and a second install gave the same module. No ISPF dialog ran on this path.
+came up after an IPL with CLPA (console checked), and a second install gave the same module. No ISPF dialog ran on this path; for dialogs on MVS/CE see "Under ISPF" below.
 
 `ZMG03RS` removes the usermod, active after the next IPL with CLPA.
 
@@ -133,12 +133,17 @@ Results on TK5 (`test/results-tk5.txt`):
   with another element recorded (a CLIST on top of the exec) the CLIST's
   `TESTV` does.
 
-- **Under ISPF** (`test/ispf`, TK5 only so far; the harness does not yet drive the
+- **Under ISPF** (`test/ispf`, on TK5; this harness does not yet drive the
   command panel of MVS/CE): `VPUT` and `VGET` from a REXX dialog started with
   `%name` (through `ZMG0001`) and from a CLIST that calls the exec, a panel with
   input read back, 300 `ISPEXEC` calls in a row, 10,000 stem entries, for variables
   that exist before the first `ISPEXEC`; see the open defect above. ISPF sends no `TSVEUPDT` inside a `TSVELOC` sequence (traced
   for `VPUT`, `VGET`, `DISPLAY`).
+- **Under ISPF on MVS/CE**, seen 2026-11-05 on a system with `ZMG0003` applied and an IPL
+  with CLPA, by hand and with interactive tests rather than with `test/ispf`: a REXX dialog
+  started from option 6 with `SELECT CMD(%name)` shows its panels with the variables of the
+  exec, and `VPUT` and `VGET` with `PROFILE` keep its values from one run to the next
+  (first run `VGET` RC 8, `VPUT` RC 0, next run `VGET` RC 0 with the saved values).
 
 Measured on the base as well: before the change, IFOX00 on TK5 gives the
 object `ZP60038` ships (ESD, TXT and RLD equal; only the assembly date in the
