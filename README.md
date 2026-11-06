@@ -10,7 +10,9 @@ next to that product and is listed here with a link.
 
 **This repository is being archived.** Its only usermod, `ZMG0003`, is
 superseded by the rework of `ZP60038` of 2026-11-06 (below), and the register
-of the `ZMG` ids moves to the maintainers' workspace, which is not public.
+of the `ZMG` ids moves to the maintainers' workspace, which is not public;
+to get a new `ZMG` id, open an issue in
+[mvslovers/brexx370](https://github.com/mvslovers/brexx370/issues).
 `ZMG0001` and `ZMG0002` stay documented next to their product (links in the
 register). The sources, tests and measurements of `ZMG0003` remain readable
 here; nothing in this repository changes after the archive.
